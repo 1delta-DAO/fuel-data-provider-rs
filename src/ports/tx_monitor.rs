@@ -1,15 +1,31 @@
+use std::str::FromStr;
 use fuels::prelude::*;
 use std::time::Duration;
+use fuels::tx::TxParameters;
 use fuels::types::BlockHeight;
 use fuels::types::output::Output;
 use serde::Deserialize;
 
 pub struct TxMonitor;
 
+abigen!(Contract(
+   name = "FuelTokenGateway",
+    abi = "resources/abi/fuel_token_gateway/out/debug/bridge_fungible_token-abi.json"
+),);
+
 impl TxMonitor{
 
     pub async fn monitor_transactions() -> Result<()> {
         let provider = Provider::connect("https://mainnet.fuel.network").await?;
+        let mut wallet = WalletUnlocked::new_random(None);
+        wallet.set_provider(provider.clone());
+
+        let balances = wallet.get_balances().await?;
+        println!("Balances: {:?}", balances);
+
+        let contract_id = ContractId::from_str("0x4ea6ccef1215d9479f1024dff70fc055ca538215d2c8c348beddffd54583d0e8")?;
+        let fuel_token_gateway = FuelTokenGateway::new(contract_id,wallet);
+
         let mut last_block = provider.latest_block_height().await?;
 
         println!("Starting from block: {}", last_block);
@@ -36,16 +52,23 @@ impl TxMonitor{
                                     println!("MINT");
                                     let asset_id = mint_tx.mint_asset_id();
                                     println!("{:?}",mint_tx.mint_asset_id());
-                                    let token_details = fetch_token_details(&asset_id.to_string()).await.unwrap();
-                                    log::info!("Mint {:?}",token_details);
+                                    //let token_details = fetch_token_details(&asset_id.to_string()).await.unwrap();
+                                    //log::info!("Mint {:?}",token_details);
+
+                                    //let token_name
+                                    //    = fuel_token_gateway.methods().name(asset_id.clone()).simulate(Default::default()).await;
+                                    //println!("MINT TN: {:?}",token_name);
                                 },
                                 TransactionType::Script(script_tx) => {
                                     println!("SCRIPT");
                                     for output in script_tx.outputs() {
                                         if let Some(asset_id) = extract_asset_id(output) {
                                             println!("Script transaction asset_id: {}", asset_id);
-                                            let token_details = fetch_token_details(&asset_id).await?;
-                                            log::info!("Script {:?}",token_details);
+                                            let token_name
+                                                = fuel_token_gateway.methods().name(asset_id.clone()).call().await;
+                                            println!("SCRIPT TN: {:?}",token_name);
+                                            //let token_details = fetch_token_details(&asset_id).await?;
+                                            //log::info!("Script {:?}",token_details);
                                         }
                                     }
                                 },
@@ -54,9 +77,12 @@ impl TxMonitor{
                                     // Iteracja po wyjściach z `CreateTransaction`
                                     for output in create_tx.outputs() {
                                         if let Some(asset_id) = extract_asset_id(output) {
-                                            println!("Create transaction asset_id: {}", asset_id);
-                                            let token_details = fetch_token_details(&asset_id).await?;
-                                            log::info!("Create {:?}",token_details);
+                                            //println!("Create transaction asset_id: {}", asset_id);
+                                            //let token_details = fetch_token_details(&asset_id).await?;
+                                            //log::info!("Create {:?}",token_details);
+                                            let token_name
+                                                = fuel_token_gateway.methods().name(asset_id.clone()).simulate(Default::default()).await;
+                                            println!("CREATE TN: {:?}",token_name);
                                         }
                                     }
                                 },
@@ -78,9 +104,9 @@ impl TxMonitor{
 }
 
 // Funkcja do wyciągania asset_id z wyjść transakcji
-fn extract_asset_id(output: &Output) -> Option<String> {
+fn extract_asset_id(output: &Output) -> Option<&AssetId> {
     match output {
-        Output::Coin { asset_id, .. } => Some(format!("{:?}", asset_id)),
+        Output::Coin { asset_id, .. } => Some(asset_id),
         _ => None,
     }
 }

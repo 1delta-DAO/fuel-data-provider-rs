@@ -1,13 +1,47 @@
 [[package]]
+name = "bridge_fungible_token"
+source = "member"
+dependencies = [
+    "contract_message_receiver",
+    "interface",
+    "standards git+https://github.com/FuelLabs/sway-standards?tag=v0.6.0#65e09f95ea8b9476b171a66c8a47108f352fa32c",
+    "std",
+    "sway_libs",
+]
+
+[[package]]
+name = "contract_message_receiver"
+source = "path+from-root-0CFC8A61C9CDDC6E"
+dependencies = ["std"]
+
+[[package]]
 name = "core"
 source = "path+from-root-6A8836696D55BC6E"
 
 [[package]]
-name = "fuel_token_gateway"
-source = "member"
+name = "interface"
+source = "path+from-root-0CFC8A61C9CDDC6E"
+dependencies = ["std"]
+
+[[package]]
+name = "standards"
+source = "git+https://github.com/FuelLabs/sway-standards?tag=v0.5.2#270350e69bd7455b7e99f0aae2e29a94d42324bd"
+dependencies = ["std"]
+
+[[package]]
+name = "standards"
+source = "git+https://github.com/FuelLabs/sway-standards?tag=v0.6.0#65e09f95ea8b9476b171a66c8a47108f352fa32c"
 dependencies = ["std"]
 
 [[package]]
 name = "std"
 source = "git+https://github.com/fuellabs/sway?tag=v0.66.5#94a066652468b4afa3bd396dacef482ed590976b"
 dependencies = ["core"]
+
+[[package]]
+name = "sway_libs"
+source = "git+https://github.com/FuelLabs/sway-libs?tag=v0.23.1#50be622109e3c584efc29edac5390c96f1ccc43a"
+dependencies = [
+    "standards git+https://github.com/FuelLabs/sway-standards?tag=v0.5.2#270350e69bd7455b7e99f0aae2e29a94d42324bd",
+    "std",
+]

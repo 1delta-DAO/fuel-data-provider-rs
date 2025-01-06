@@ -495,5 +495,3 @@ fn _generate_sub_id_from_metadata(token_address: b256, token_id: b256) -> b256 {
     // SRC8: sub_id = sha256(chain_id ++ token_address + token_id)
     sha256((String::from_ascii_str("1"), token_address, token_id))
 }
-Bytecode
-0x1af0300074000002000
