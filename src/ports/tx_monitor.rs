@@ -26,6 +26,15 @@ impl TxMonitor{
         let contract_id = ContractId::from_str("0x4ea6ccef1215d9479f1024dff70fc055ca538215d2c8c348beddffd54583d0e8")?;
         let fuel_token_gateway = FuelTokenGateway::new(contract_id,wallet);
 
+        let asset_id_h: AssetId = AssetId::from_str("0x1d5d97005e41cae2187a895fd8eab0506111e0e2f3331cd3912c15c24e3c1d82").unwrap_or(AssetId::zeroed());
+
+        let token_name = fuel_token_gateway.methods().name(asset_id_h.clone()).with_contract_ids(&[
+            Bech32ContractId::from(ContractId::from_str("0x0ceafc5ef55c66912e855917782a3804dc489fb9e27edfd3621ea47d2a281156").unwrap_or(ContractId::zeroed())),
+        ]).simulate(Execution::StateReadOnly).await;
+
+
+        println!("ASSET TN: {:?}",token_name.unwrap().value);
+
         let mut last_block = provider.latest_block_height().await?;
 
         println!("Starting from block: {}", last_block);
@@ -64,8 +73,9 @@ impl TxMonitor{
                                     for output in script_tx.outputs() {
                                         if let Some(asset_id) = extract_asset_id(output) {
                                             println!("Script transaction asset_id: {}", asset_id);
+                                            let aset = AssetId::from_str("0x44b09d7143aa7b1aac7844ee9cfc38893b12d20c3822ecb18dbf2c6846ea63f0").unwrap();
                                             let token_name
-                                                = fuel_token_gateway.methods().name(asset_id.clone()).call().await;
+                                                = fuel_token_gateway.methods().name(aset).simulate(Execution::StateReadOnly).await;
                                             println!("SCRIPT TN: {:?}",token_name);
                                             //let token_details = fetch_token_details(&asset_id).await?;
                                             //log::info!("Script {:?}",token_details);
@@ -80,9 +90,9 @@ impl TxMonitor{
                                             //println!("Create transaction asset_id: {}", asset_id);
                                             //let token_details = fetch_token_details(&asset_id).await?;
                                             //log::info!("Create {:?}",token_details);
-                                            let token_name
-                                                = fuel_token_gateway.methods().name(asset_id.clone()).simulate(Default::default()).await;
-                                            println!("CREATE TN: {:?}",token_name);
+                                            //let token_name
+                                            //    = fuel_token_gateway.methods().name(asset_id.clone()).simulate(Default::default()).await;
+                                            //println!("CREATE TN: {:?}",token_name);
                                         }
                                     }
                                 },
