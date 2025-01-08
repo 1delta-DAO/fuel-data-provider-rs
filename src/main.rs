@@ -7,6 +7,8 @@ mod api;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
+    env_logger::init();
+
     let tx_handle = tokio::spawn(async {
         log::info!("Starting TX monitoring service ...");
         match TxMonitor::monitor_transactions().await {

@@ -1,0 +1,19 @@
+ScriptTransaction {
+  tx: ChargeableTransaction {
+  body: ScriptBody {
+  script_gas_limit: 2400000,
+  receipts_root: 7e71e451305702ee4f8ff2099d4f3cd300a7a84918ee95967155bc2e27877a42,
+  script: ScriptCode {
+  bytes: 1a403000504100301a445000ba...
+}, script_data: 0000000000b58fba1493d4ec82...},
+policies: Policies {bits: PoliciesBits(MaxFee), values: [0, 0, 0, 5774] },
+inputs: [
+Contract(Contract {utxo_id: UtxoId {tx_id: 52adfed4d03e88680c9f5055638c5a69368339f251f19c82a0ff3cb383cdd118, output_index: 1},
+balance_root: 0000000000000000000000000000000000000000000000000000000000000000, state_root: 0000000000000000000000000000000000000000000000000000000000000000,
+tx_pointer: TxPointer {block_height: 00aa6631, tx_index: 0}, contract_id: 2e40f2b244b98ed6b8204b3de0156c6961f98525c8162f80162fcf53eebd90e7}),
+CoinSigned(Coin {utxo_id: UtxoId {tx_id: 84f053fa26c48d8f677ea419a9ed07bf713e6ad8e7cb468608d3cab8cf4a97d2, output_index: 2},
+owner: d759b67f75870f52dfe3062b346674b1bb9bc7a5a5d867a97703dbcbc3358cab, amount: 11898810, asset_id: 1493d4ec82124de8f9b625682de69dcccda79e882b89a55a8c737b12de67bd68, tx_pointer: TxPointer {block_height: 0041a841, tx_index: 2 }, witness_index: 0, predicate_gas_used: Empty, predicate: Empty, predicate_data: Empty}),
+CoinSigned(Coin {utxo_id: UtxoId {tx_id: f432a7b07971c119a9f75d7d244aa319c661f70497f6f657ad64abada5a1ae5b, output_index: 3},
+owner: d759b67f75870f52dfe3062b346674b1bb9bc7a5a5d867a97703dbcbc3358cab, amount: 999688, asset_id: f8f8b6283d7fa5b672b530cbb84fcccb4ff8dc40f8176ef4544ddb1f1952ad07, tx_pointer: TxPointer {block_height: 00912f6e, tx_index: 2}, witness_index: 0, predicate_gas_used: Empty, predicate: Empty, predicate_data: Empty}), Contract(Contract { utxo_id: UtxoId {tx_id: 52adfed4d03e88680c9f5055638c5a69368339f251f19c82a0ff3cb383cdd118, output_index: 0}, balance_root: 0000000000000000000000000000000000000000000000000000000000000000, state_root: 0000000000000000000000000000000000000000000000000000000000000000, tx_pointer: TxPointer {block_height: 00aa6631, tx_index: 0}, contract_id: a703db08d1dbf30a6cd2fef942d8dcf03f25d2254e2091ee1f97bf5fa615639e})
+],
+outputs: [Contract(Contract {input_index: 0, balance_root: 0000000000000000000000000000000000000000000000000000000000000000, state_root: 0000000000000000000000000000000000000000000000000000000000000000}), Variable {to: d759b67f75870f52dfe3062b346674b1bb9bc7a5a5d867a97703dbcbc3358cab, amount: 13919769, asset_id: f8f8b6283d7fa5b672b530cbb84fcccb4ff8dc40f8176ef4544ddb1f1952ad07}, Change {to: d759b67f75870f52dfe3062b346674b1bb9bc7a5a5d867a97703dbcbc3358cab, amount: 0, asset_id: 1493d4ec82124de8f9b625682de69dcccda79e882b89a55a8c737b12de67bd68}, Change {to: d759b67f75870f52dfe3062b346674b1bb9bc7a5a5d867a97703dbcbc3358cab, amount: 999306, asset_id: f8f8b6283d7fa5b672b530cbb84fcccb4ff8dc40f8176ef4544ddb1f1952ad07}, Contract(Contract {input_index: 3, balance_root: 0000000000000000000000000000000000000000000000000000000000000000, state_root: 0000000000000000000000000000000000000000000000000000000000000000})], witnesses: [Witness {data: bacd8b6476b5869ca654b57eb3...}], metadata: None}, is_using_predicates: false}
