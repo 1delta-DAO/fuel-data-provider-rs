@@ -24,6 +24,8 @@ abigen!(
     ),
 );
 static FUEL_TOKEN_GATEWAY_CID: &str = "0x4ea6ccef1215d9479f1024dff70fc055ca538215d2c8c348beddffd54583d0e8";
+static MIRA_AMM_CID: &str = "0x4ea6ccef1215d9479f1024dff70fc055ca538215d2c8c348beddffd54583d0e8";
+static MIRA_AMM_2_CID: &str = "0x2e40f2b244b98ed6b8204b3de0156c6961f98525c8162f80162fcf53eebd90e7"; //To ten
 impl TxMonitor{
 
     pub async fn monitor_transactions() -> Result<()> {
@@ -53,7 +55,31 @@ impl TxMonitor{
 
         //let mut last_block = provider.latest_block_height().await?;
 
+        let mira_cid = ContractId::from_str(MIRA_AMM_2_CID).unwrap_or(ContractId::zeroed());
+
+        let mira_contract = MiraV1Core::new(mira_cid,wallet);
+
+        let p_asset_id_0: AssetId = AssetId::from_str("0x1d5d97005e41cae2187a895fd8eab0506111e0e2f3331cd3912c15c24e3c1d82").unwrap_or(AssetId::zeroed());
+        let p_asset_id_1: AssetId = AssetId::from_str("0x286c479da40dc953bddc3bb4c453b608bba2e0ac483b077bd475174115395e6b").unwrap_or(AssetId::zeroed());
+
+        let mira_pool_id = MiraPoolId{
+            asset_id_0: p_asset_id_0,
+            asset_id_1: p_asset_id_1,
+            is_stable: false
+        };
+
+        // let pool_sample
+        //     = mira_contract.methods().pool_metadata((p_asset_id_0,p_asset_id_1,false))
+        //     .simulate(Execution::StateReadOnly).await.unwrap().value.unwrap();
+
+        let pool_sample = get_mira_pool_metadata(&provider,mira_pool_id).await?;
+
+        log::info!("POOL_METADATA: {:?}",pool_sample);
+
         //MiraV1Core::methods()
+
+        //pool_id: (1d5d97005e41cae2187a895fd8eab0506111e0e2f3331cd3912c15c24e3c1d82, 286c479da40dc953bddc3bb4c453b608bba2e0ac483b077bd475174115395e6b, false)
+
 
         let mut start_block:u32 = 11000000;
 
@@ -117,9 +143,9 @@ impl TxMonitor{
                                                                     log::info!("{:?}",receipt);
                                                                     let event = SwapEvent::try_from(receipt.data().unwrap()).unwrap();
                                                                     log::info!("{:?}",event);
-                                                                    let asset_0_id = get_token_details_by_asset_id(&provider, &event.pool_id.0).await?;
+                                                                    let asset_0_id = get_token_details_by_asset_id_2(&provider, &event.pool_id.0).await?;
                                                                     log::info!("A0: {:?}",asset_0_id);
-                                                                    let asset_1_id = get_token_details_by_asset_id(&provider, &event.pool_id.1).await?;
+                                                                    let asset_1_id = get_token_details_by_asset_id_2(&provider, &event.pool_id.1).await?;
                                                                     log::info!("A0: {:?}",asset_1_id);
                                                                 }
                                                                 Some(MiraEvent::CreatePool) => {
@@ -223,6 +249,34 @@ fn extract_asset_id(output: &Output) -> Option<&AssetId> {
 
 //Token methods
 
+async fn get_token_details_by_asset_id_2(provider: &Provider, asset_id: &AssetId) -> Result<TokenDetails>{
+
+    let mut wallet = WalletUnlocked::new_random(None);
+    wallet.set_provider(provider.clone());
+
+    let p_asset_id_0: AssetId = AssetId::from_str("0x1d5d97005e41cae2187a895fd8eab0506111e0e2f3331cd3912c15c24e3c1d82").unwrap_or(AssetId::zeroed());
+    let p_asset_id_1: AssetId = AssetId::from_str("0x286c479da40dc953bddc3bb4c453b608bba2e0ac483b077bd475174115395e6b").unwrap_or(AssetId::zeroed());
+
+    let mira_cid = ContractId::from_str(MIRA_AMM_2_CID).unwrap_or(ContractId::zeroed());
+
+    let mira_contract = MiraV1Core::new(mira_cid,wallet);
+
+    let token_symbol
+        = mira_contract.methods().total_assets()
+        .simulate(Execution::StateReadOnly).await?;
+
+    log::info!("TS: {:?}",token_symbol);
+
+    let token_details = TokenDetails{
+        name: "".to_string(),
+        symbol: "".to_string(),
+        decimals: 0,
+    };
+
+    Ok(token_details)
+
+}
+
 async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<TokenDetails>{
     let mut wallet = WalletUnlocked::new_random(None);
     wallet.set_provider(provider.clone());
@@ -236,13 +290,13 @@ async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -
 
     let token_name = fuel_token_gateway.methods().name(asset_id.clone()).with_contract_ids(&[
         Bech32ContractId::from(ContractId::from_str("0x0ceafc5ef55c66912e855917782a3804dc489fb9e27edfd3621ea47d2a281156").unwrap_or(ContractId::zeroed())),
-    ]).simulate(Execution::StateReadOnly).await.unwrap().value.unwrap();
+    ]).simulate(Execution::StateReadOnly).await?.value.unwrap();
     let token_symbol = fuel_token_gateway.methods().symbol(asset_id.clone()).with_contract_ids(&[
         Bech32ContractId::from(ContractId::from_str("0x0ceafc5ef55c66912e855917782a3804dc489fb9e27edfd3621ea47d2a281156").unwrap_or(ContractId::zeroed())),
-    ]).simulate(Execution::StateReadOnly).await.unwrap().value.unwrap();
+    ]).simulate(Execution::StateReadOnly).await?.value.unwrap();
     let token_decimals = fuel_token_gateway.methods().decimals(asset_id.clone()).with_contract_ids(&[
         Bech32ContractId::from(ContractId::from_str("0x0ceafc5ef55c66912e855917782a3804dc489fb9e27edfd3621ea47d2a281156").unwrap_or(ContractId::zeroed())),
-    ]).simulate(Execution::StateReadOnly).await.unwrap().value.unwrap();
+    ]).simulate(Execution::StateReadOnly).await?.value.unwrap();
 
 
     //log::info!("ASSET TN: {:?}",token_name);
@@ -276,11 +330,37 @@ async fn get_block_time_by_block_height(provider: &Provider, block_height: u32) 
     Ok(token_details)
 }*/
 
+async fn get_mira_pool_metadata(provider: &Provider, pool_id: MiraPoolId) ->Result<PoolMetadata>{
+
+    let mut wallet = WalletUnlocked::new_random(None);
+    wallet.set_provider(provider.clone());
+
+
+    let mira_cid = ContractId::from_str(MIRA_AMM_2_CID).unwrap_or(ContractId::zeroed());
+
+    let mira_contract = MiraV1Core::new(mira_cid,wallet);
+
+
+    let pool_sample
+        = mira_contract.methods().pool_metadata((pool_id.asset_id_0,pool_id.asset_id_1,pool_id.is_stable))
+        .simulate(Execution::StateReadOnly).await.unwrap().value.unwrap();
+
+    Ok(pool_sample)
+
+}
+
 #[derive(Debug, Deserialize)]
 struct TokenDetails {
     name: String,
     symbol: String,
     decimals: u8,
+}
+
+#[derive(Debug, Deserialize)]
+struct MiraPoolId {
+    asset_id_0: AssetId,
+    asset_id_1: AssetId,
+    is_stable: bool,
 }
 
 #[repr(u64)]
