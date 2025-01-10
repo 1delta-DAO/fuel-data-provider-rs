@@ -3,6 +3,7 @@ use crate::ports::tx_monitor::TxMonitor;
 mod ports;
 mod domain;
 mod api;
+mod constants;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
