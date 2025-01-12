@@ -7,14 +7,7 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
-    pub tx_first_block_number: i32,
-    pub tx_first_block_time: Option<DateTimeWithTimeZone>,
-    pub tx_last_block_number: i32,
-    pub tx_last_block_time: Option<DateTimeWithTimeZone>,
-    pub swaps_first_block_number: i32,
-    pub swaps_first_block_time: Option<DateTimeWithTimeZone>,
-    pub swaps_last_block_number: i32,
-    pub swaps_last_block_time: Option<DateTimeWithTimeZone>,
+    pub block_number: i32,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
 }

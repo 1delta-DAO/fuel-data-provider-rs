@@ -19,14 +19,7 @@ impl MigrationTrait for Migration {
                     .table(SyncStatus::Table)
                     .if_not_exists()
                     .col(ColumnDef::new(SyncStatus::Id).uuid().not_null().primary_key().default(Expr::cust("uuid_generate_v4()")))
-                    .col(ColumnDef::new(SyncStatus::TxFirstBlockNumber).unsigned().not_null().default(0))
-                    .col(ColumnDef::new(SyncStatus::TxFirstBlockTime).timestamp_with_time_zone().null())
-                    .col(ColumnDef::new(SyncStatus::TxLastBlockNumber).unsigned().not_null().default(0))
-                    .col(ColumnDef::new(SyncStatus::TxLastBlockTime).timestamp_with_time_zone().null())
-                    .col(ColumnDef::new(SyncStatus::SwapsFirstBlockNumber).unsigned().not_null().default(0))
-                    .col(ColumnDef::new(SyncStatus::SwapsFirstBlockTime).timestamp_with_time_zone().null())
-                    .col(ColumnDef::new(SyncStatus::SwapsLastBlockNumber).unsigned().not_null().default(0))
-                    .col(ColumnDef::new(SyncStatus::SwapsLastBlockTime).timestamp_with_time_zone().null())
+                    .col(ColumnDef::new(SyncStatus::BlockNumber).unsigned().not_null().default(0))
                     .col(ColumnDef::new(SyncStatus::CreatedAt).timestamp_with_time_zone().not_null().default(Expr::cust("NOW()")))
                     .col(ColumnDef::new(SyncStatus::UpdatedAt).timestamp_with_time_zone().not_null().default(Expr::cust("NOW()")))
                     .to_owned(),
@@ -109,6 +102,9 @@ impl MigrationTrait for Migration {
                     .table(PairSwaps::Table)
                     .if_not_exists()
                     .col(ColumnDef::new(PairSwaps::Id).uuid().not_null().primary_key().default(Expr::cust("uuid_generate_v4()")))
+                    .col(ColumnDef::new(PairSwaps::BlockNumber).string().not_null())
+                    .col(ColumnDef::new(PairSwaps::TxId).string().not_null())
+                    .col(ColumnDef::new(PairSwaps::UtxoId).string().not_null())
                     .col(ColumnDef::new(PairSwaps::PairId).uuid().not_null())
                     .col(ColumnDef::new(PairSwaps::BaseAmount).decimal().not_null().default(0))
                     .col(ColumnDef::new(PairSwaps::QuoteAmount).decimal().not_null().default(0))
@@ -169,6 +165,9 @@ pub enum TokenPairs {
 pub enum PairSwaps {
     Table,
     Id,
+    BlockNumber,
+    TxId,
+    UtxoId,
     PairId,
     BaseAmount,
     QuoteAmount,
@@ -193,14 +192,7 @@ pub enum MiraPools {
 pub enum SyncStatus{
     Table,
     Id,
-    TxFirstBlockNumber,
-    TxFirstBlockTime,
-    TxLastBlockNumber,
-    TxLastBlockTime,
-    SwapsFirstBlockNumber,
-    SwapsFirstBlockTime,
-    SwapsLastBlockNumber,
-    SwapsLastBlockTime,
+    BlockNumber,
     CreatedAt,
     UpdatedAt,
 }
