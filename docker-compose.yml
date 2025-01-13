@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+#  fuel-dp:
+#    build: .
+#    ports:
+#      - "${SERVER_PORT_HTTP:-8080}:8080"
+#    environment:
+#      RUST_LOG: "info"
+#      SERVER_PORT_HTTP: ${SERVER_PORT_HTTP:-8080}
+#    networks:
+#      - fuel-data-provider
+  db:
+    image: postgres:14.1-alpine
+    container_name: db-fuel
+    restart: always
+    environment:
+      - POSTGRES_DB=fuel_data
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+    ports:
+      - '5432:5432'
+    volumes:
+      - db_fuel:/var/lib/postgresql/data
+    networks:
+      - fuel-data-provider
+  adminer:
+    image: adminer:latest
+    container_name: db-adminer-fuel
+    restart: always
+    ports:
+      - 8082:8080
+    networks:
+      - fuel-data-provider
+volumes:
+  db_fuel:
+    driver: local
+networks:
+  fuel-data-provider:
+    driver: bridge

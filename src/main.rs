@@ -1,13 +1,21 @@
+use std::env;
+use crate::config::CONFIG;
 use crate::ports::tx_monitor::TxMonitor;
 
 mod ports;
 mod domain;
 mod api;
+mod config;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     env_logger::init();
+    if env::var("RUST_LOG").is_err() {
+        env::set_var("RUST_LOG", "info");
+    }
+    log::info!("Starting application...");
+    log::info!("Config: {}", CONFIG.default.server_port_http);
 
     let tx_handle = tokio::spawn(async {
         log::info!("Starting TX monitoring service ...");
