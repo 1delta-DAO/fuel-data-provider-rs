@@ -1,0 +1,11 @@
+[workspace]
+members = [
+    "fuel_token_gateway",
+    "fuel_token_gateway_dep/contract-message-receiver",
+    "fuel_token_gateway_dep/interface",
+    "mira_amm_contract",
+    "mira_amm_contract_dep/interfaces",
+    "mira_amm_contract_dep/math",
+    "mira_amm_contract_dep/utils",
+    # "mira_amm_contract_dep/swap",
+]
