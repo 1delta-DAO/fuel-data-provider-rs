@@ -1,4 +1,3 @@
-pub mod tx_monitor;
+pub mod tx_monitor_poc;
 pub mod db;
-
-pub use tx_monitor::TxMonitor;
+pub mod blockchain;

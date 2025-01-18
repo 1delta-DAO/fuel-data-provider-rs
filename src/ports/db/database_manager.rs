@@ -12,6 +12,7 @@ pub static DB_MANAGER: Lazy<DatabaseManager> = Lazy::new(|| DatabaseManager { po
 
 impl DatabaseManager {
     pub async fn initialize(&self) -> Result<(), String> {
+        log::info!("DB connection initializing ...");
         let connection_url = format!("postgres://{}:{}@{}", CONFIG.default.db_username, CONFIG.default.db_password, CONFIG.default.db_url);
         let mut options = ConnectOptions::new(connection_url);
         options
