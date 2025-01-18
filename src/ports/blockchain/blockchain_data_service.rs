@@ -129,6 +129,8 @@ impl BlockchainDataService{
         let estimated_time = calc_window.start_block_time
             + chrono::Duration::milliseconds((time_per_block * block_offset) as i64);
 
+        log::info!("Block: {} - time: {}",block_number,estimated_time);
+
         Ok(estimated_time)
     }
 
