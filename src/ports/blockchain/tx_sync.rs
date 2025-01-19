@@ -15,7 +15,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 use crate::config::CONFIG;
 use crate::domain::entity::TokenEntity;
-use crate::domain::service::persistence::{SyncStatusService, TokenService};
+use crate::domain::service::persistence::{SyncStatusService, TokenPairsService, TokenService};
 use crate::ports::blockchain::blockchain_data_service::BlockchainDataService;
 use crate::ports::db::database_manager::DB_MANAGER;
 use crate::ports::tx_monitor_poc::MiraEvent;
@@ -105,6 +105,12 @@ impl TxSync{
                                                                                 log::info!("A0 amount: IN:{}, OUT:{}", &event.asset_0_in, &event.asset_0_out);
                                                                                 log::info!("A1: {:?}",asset_1_id);
                                                                                 log::info!("A1 amount: IN:{}, OUT:{}", &event.asset_1_in, &event.asset_1_out);
+
+                                                                                //1. Find pair or if doesn't exist
+                                                                                let token_pair = TokenPairsService::find_or_create_pair(&asset_0_id,&asset_1_id).await;
+                                                                                //2. Create log
+
+
                                                                             }
                                                                         }else{
                                                                             continue;
@@ -257,12 +263,4 @@ async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -
         }
     }
 
-}
-
-#[derive(Debug, Deserialize)]
-struct TokenDetails {
-    address: String,
-    name: String,
-    symbol: String,
-    decimals: u8,
 }
