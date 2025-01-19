@@ -183,7 +183,7 @@ async fn find_or_create_mira_pool(pair_id: Uuid,base_token: &TokenEntity, quote_
     match MiraPoolsService::find_or_create(pair_id, base_token,quote_token).await{
         Ok(mira_pool)=>{
             //refresh
-            Some(mira_pool)
+            Some(refresh_mira_pool(mira_pool).await)
         }
         Err(err)=>{
             None
@@ -194,7 +194,7 @@ async fn find_or_create_mira_pool(pair_id: Uuid,base_token: &TokenEntity, quote_
 }
 
 async fn refresh_mira_pool(mira_pool: MiraPoolsEntity) -> MiraPoolsEntity{
-    mira_pool
+    get_mira_pool_metadata(mira_pool).await
 }
 
 async fn get_block_time_by_block_height(provider: &Provider, block_height: u32) -> fuels::prelude::Result<DateTime<Utc>> {
@@ -304,7 +304,7 @@ async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -
 }
 
 async fn get_mira_pool_metadata(mut pool: MiraPoolsEntity) ->MiraPoolsEntity{
-    
+
     match TokenPairsService::find_by_id(pool.pair_id).await{
         Ok(result) =>{
 
@@ -332,6 +332,16 @@ async fn get_mira_pool_metadata(mut pool: MiraPoolsEntity) ->MiraPoolsEntity{
             pool.reserve_quote = Decimal::new(pool_sample.reserve_1 as i64,0);
             pool.updated_at = Utc::now();
 
+            log::info!("Updating pool metadata {:?}",pool);
+
+            match MiraPoolsService::update(pool.clone()).await{
+                Ok(result)=>{
+                    log::info!("update ok: {:?}",result);
+                }
+                Err(err)=>{
+                    log::error!("Update exception: {}",err);
+                }
+            }
 
         }
         Err(err)=>{

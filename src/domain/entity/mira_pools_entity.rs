@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use sea_orm::prelude::Decimal;
 use uuid::Uuid;
 
+#[derive(Clone, Debug)]
 pub struct MiraPoolsEntity {
     pub id: Uuid,
     pub pair_id: Uuid,
