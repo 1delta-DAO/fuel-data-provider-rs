@@ -1,7 +1,7 @@
 use chrono::Utc;
 use crate::ports::db::repository::{CrudRepository, MiraPoolsRepository};
-use sea_orm::{DbErr, IntoActiveModel};
-use sea_orm::prelude::Decimal;
+use sea_orm::{ActiveValue, DbErr, IntoActiveModel};
+use sea_orm::prelude::{DateTimeWithTimeZone, Decimal};
 use uuid::Uuid;
 use crate::domain::entity::entity::Entity;
 use crate::domain::entity::mira_pools_entity::MiraPoolsEntity;
@@ -28,7 +28,11 @@ impl MiraPoolsService {
 
     /// Updates an existing pool record
     pub async fn update(pool_entity: MiraPoolsEntity) -> Result<MiraPoolsEntity, DbErr> {
-        let active_model: crate::ports::db::model::mira_pools::ActiveModel = pool_entity.to_model().into();
+        let mut active_model: crate::ports::db::model::mira_pools::ActiveModel = pool_entity.to_model().into();
+        active_model.reserve_base = ActiveValue::Set(Decimal::from(pool_entity.swaps));
+        active_model.reserve_base = ActiveValue::Set(pool_entity.reserve_base);
+        active_model.reserve_quote = ActiveValue::Set(pool_entity.reserve_quote);
+        active_model.updated_at = ActiveValue::Set(DateTimeWithTimeZone::from(chrono::Utc::now()));
         let updated_model = MiraPoolsRepository::update(active_model).await?;
         Ok(MiraPoolsEntity::from_model(&updated_model))
     }
