@@ -1,6 +1,7 @@
 use crate::ports::db::model::token_pairs::Model;
 use crate::ports::db::repository::{CrudRepository, TokenPairsRepository};
 use sea_orm::{DbErr, IntoActiveModel};
+use uuid::Uuid;
 use crate::domain::entity::entity::Entity;
 use crate::domain::entity::{TokenEntity, TokenPairsEntity};
 
@@ -13,6 +14,15 @@ impl TokenPairsService {
         quote_token_details_id: uuid::Uuid,
     ) -> Result<Option<TokenPairsEntity>, DbErr> {
         if let Some(model) = TokenPairsRepository::find_by_token_ids(base_token_details_id, quote_token_details_id).await? {
+            Ok(Some(TokenPairsEntity::from_model(&model)))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Finds a token pair by `id`
+    pub async fn find_by_id(id: Uuid) -> Result<Option<TokenPairsEntity>, DbErr> {
+        if let Some(model) = TokenPairsRepository::find_by_id(id).await? {
             Ok(Some(TokenPairsEntity::from_model(&model)))
         } else {
             Ok(None)

@@ -12,6 +12,7 @@ use fuels::types::output::Output;
 use fuels::types::param_types::ParamType;
 use num_traits::AsPrimitive;
 use sea_orm::DbErr;
+use sea_orm::prelude::Decimal;
 use serde::Deserialize;
 use uuid::Uuid;
 use crate::config::CONFIG;
@@ -299,5 +300,44 @@ async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -
             }
         }
     }
+
+}
+
+async fn get_mira_pool_metadata(mut pool: MiraPoolsEntity) ->MiraPoolsEntity{
+    
+    match TokenPairsService::find_by_id(pool.pair_id).await{
+        Ok(result) =>{
+
+            let token_pair = result.unwrap();
+
+            let provider = Provider::connect("https://mainnet.fuel.network").await.unwrap();
+            let mut wallet = WalletUnlocked::new_random(None);
+            wallet.set_provider(provider.clone());
+
+
+            let mira_cid = ContractId::from_str(MIRA_AMM_2_CID)
+                .unwrap_or(ContractId::zeroed());
+
+            let mira_contract = MiraV1Core::new(mira_cid,wallet);
+
+            let pool_sample
+                = mira_contract.methods()
+                .pool_metadata(
+                    (AssetId::from_str(token_pair.base_address.as_str()).unwrap(),
+                     AssetId::from_str(token_pair.quote_address.as_str()).unwrap(),
+                     false))
+                .simulate(Execution::StateReadOnly).await.unwrap().value.unwrap();
+
+            pool.reserve_base = Decimal::new(pool_sample.reserve_0 as i64,0);
+            pool.reserve_quote = Decimal::new(pool_sample.reserve_1 as i64,0);
+            pool.updated_at = Utc::now();
+
+
+        }
+        Err(err)=>{
+
+        }
+    }
+    pool
 
 }
