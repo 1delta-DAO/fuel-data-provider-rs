@@ -12,8 +12,10 @@ use fuels::types::output::Output;
 use fuels::types::param_types::ParamType;
 use num_traits::AsPrimitive;
 use serde::Deserialize;
+use uuid::Uuid;
 use crate::config::CONFIG;
-use crate::domain::service::persistence::SyncStatusService;
+use crate::domain::entity::TokenEntity;
+use crate::domain::service::persistence::{SyncStatusService, TokenService};
 use crate::ports::blockchain::blockchain_data_service::BlockchainDataService;
 use crate::ports::db::database_manager::DB_MANAGER;
 use crate::ports::tx_monitor_poc::MiraEvent;
@@ -64,13 +66,72 @@ impl TxSync{
                                 let receipts = txr.status.clone().take_receipts();
                                 match transaction {
                                     TransactionType::Mint(mint_tx) => {
-                                        log::info!("MINT TX");
+                                        //log::info!("MINT TX");
                                     },
                                     TransactionType::Script(script_tx) => {
                                         log::info!("SCRIPT TX");
+                                        let mira_contract_id = ContractId::from_str(CONFIG.default.cdi_mira_amm.as_str())?;
+                                        for input in script_tx.inputs() {
+                                            let cid = input.contract_id();
+                                            if cid.is_some() {
+                                                if mira_contract_id == cid.unwrap().clone() {
+                                                    for receipt in receipts.clone(){
+                                                        match receipt.clone() {
+                                                            Receipt::LogData {
+                                                                id,
+                                                                ra,
+                                                                rb,
+                                                                ptr,
+                                                                len,
+                                                                digest,
+                                                                pc,
+                                                                is,
+                                                                data,
+                                                            } => {
+                                                                let log_id = receipt.rb().unwrap() as u64;
+
+                                                                match MiraEvent::from_u64(log_id) {
+                                                                    Some(MiraEvent::Swap) => {
+                                                                        log::info!("SwapEvent");
+                                                                        log::info!("BlockID: {}", block_height );
+                                                                        log::info!("TX: {}",tx);
+                                                                        log::info!("Input: {}",input.utxo_id().unwrap_or(&Default::default()));
+                                                                        //log::info!("{:?}",receipt);
+                                                                        let event = SwapEvent::try_from(receipt.data().unwrap()).unwrap();
+                                                                        //log::info!("{:?}",event);
+                                                                        if let Some(asset_0_id) = get_token_details_by_asset_id(&provider, &event.pool_id.0).await? {
+                                                                            if let Some(asset_1_id) = get_token_details_by_asset_id(&provider, &event.pool_id.1).await?{
+                                                                                log::info!("A0: {:?}",asset_0_id);
+                                                                                log::info!("A0 amount: IN:{}, OUT:{}", &event.asset_0_in, &event.asset_0_out);
+                                                                                log::info!("A1: {:?}",asset_1_id);
+                                                                                log::info!("A1 amount: IN:{}, OUT:{}", &event.asset_1_in, &event.asset_1_out);
+                                                                            }
+                                                                        }else{
+                                                                            continue;
+                                                                        }
+                                                                    }
+                                                                    Some(MiraEvent::CreatePool) => {
+                                                                        log::info!("CreatePoolEvent");
+                                                                    }
+                                                                    Some(MiraEvent::TotalSupply) => {
+                                                                        log::info!("TotalSupplyEvent");
+                                                                    }
+                                                                    None => {
+                                                                        log::info!("OtherType log_id: {}", log_id);
+                                                                    }
+                                                                }
+                                                            }
+                                                            _ => {
+                                                                //log::info!("Other type: {:?}",receipt);
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
                                     },
                                     TransactionType::Create(create_tx) => {
-                                        log::info!("CREATE TX");
+                                        //log::info!("CREATE TX");
                                     },
 
                                     _ => {
@@ -135,6 +196,73 @@ async fn is_block_in_calc_window(provider: &Provider, block_number: u64) -> bool
     block_time >= cutoff_time
 }
 
+async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>>{
+
+    let token = TokenService::find_by_address(&asset_id.to_string()).await.unwrap();
+
+    if token.is_some(){
+        log::info!("Token found in DB");
+        Ok(token)
+    }
+    else{
+        log::info!("Token not found");
+
+        let mut wallet = WalletUnlocked::new_random(None);
+        wallet.set_provider(provider.clone());
+
+        let contract_id = ContractId::from_str(FUEL_TOKEN_GATEWAY_CID).unwrap_or(ContractId::zeroed());
+        let fuel_token_gateway = crate::ports::tx_monitor_poc::FuelTokenGateway::new(contract_id, wallet);
+
+        //TODO: There has to be more efficient way to take all this data at once
 
 
+        let benchContract = Bech32ContractId
+        ::from(ContractId::from_str("0x0ceafc5ef55c66912e855917782a3804dc489fb9e27edfd3621ea47d2a281156")
+            .unwrap_or(ContractId::zeroed()));
 
+        let response = fuel_token_gateway.methods().name(asset_id.clone()).with_contract_ids(&[benchContract.clone(),
+        ]).simulate(Execution::StateReadOnly).await;
+
+        match response{
+            Ok(call_response) => {
+                match call_response.value {
+                    Some(token_name) => {
+                        let token_symbol = fuel_token_gateway.methods().symbol(asset_id.clone()).with_contract_ids(&[benchContract.clone(),
+                        ]).simulate(Execution::StateReadOnly).await?.value.unwrap();
+
+                        let token_decimals = fuel_token_gateway.methods().decimals(asset_id.clone()).with_contract_ids(&[benchContract.clone(),
+                        ]).simulate(Execution::StateReadOnly).await?.value.unwrap();
+
+                        let token_entity = TokenEntity{
+                            id: Uuid::new_v4(),
+                            address: asset_id.to_string(),
+                            symbol: token_symbol,
+                            name: token_name,
+                            decimals: token_decimals as i32,
+                            created_at: Utc::now(),
+                            updated_at: Utc::now(),
+                        };
+                        Ok(Some(TokenService::create(token_entity).await.unwrap()))
+                    },
+                    None => {
+                        log::info!("No asset found - int");
+                        Ok(None)
+                    },
+                }
+            }
+            Err(e) => {
+                log::info!("No asset found - ext");
+                Ok(None)
+            }
+        }
+    }
+
+}
+
+#[derive(Debug, Deserialize)]
+struct TokenDetails {
+    address: String,
+    name: String,
+    symbol: String,
+    decimals: u8,
+}

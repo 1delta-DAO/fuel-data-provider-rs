@@ -3,6 +3,7 @@ use crate::ports::db::model::token::Model;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
+#[derive(Debug)]
 pub struct TokenEntity {
     pub id: Uuid,
     pub address: String,

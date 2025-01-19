@@ -1,6 +1,8 @@
 pub mod crud_repository;
 pub use crud_repository::CrudRepository;
 pub mod sync_status_repository;
-pub use sync_status_repository::SyncStatusRepository;
+pub mod token_repository;
 
+pub use sync_status_repository::SyncStatusRepository;
+pub use token_repository::TokenRepository;
 
