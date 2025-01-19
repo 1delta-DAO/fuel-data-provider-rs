@@ -24,6 +24,7 @@ pub struct DefaultConfig {
     pub mira_swap_event: String,
     pub mira_create_pool: String,
     pub mira_total_supply: String,
+    pub mira_pool_max_age: u8,
 }
 
 #[derive(Debug, Deserialize)]
@@ -48,6 +49,7 @@ pub enum EnvVar {
     MiraSwapEvent,
     MiraCreatePool,
     MiraTotalSupply,
+    MiraPoolMaxAge,
 }
 
 // Implement Display for EnvVar to convert to string
@@ -70,6 +72,7 @@ impl fmt::Display for EnvVar {
             EnvVar::MiraSwapEvent => "MIRA_SWAP_EVENT",
             EnvVar::MiraCreatePool => "MIRA_CREATE_POOL",
             EnvVar::MiraTotalSupply => "MIRA_TOTAL_SUPPLY",
+            EnvVar::MiraPoolMaxAge => "MIRA_POOL_MAX_AGE",
         };
         write!(f, "{}", name)
     }
@@ -125,6 +128,8 @@ pub fn load_config_from_env_or_file() -> Result<AppConfig, Box<dyn Error>> {
         EnvVar::TxLogStartBlockNumber.get_value(config.default.tx_log_start_block_number);
     config.default.calculation_window =
         EnvVar::CalculationWindow.get_value(config.default.calculation_window);
+    config.default.mira_pool_max_age =
+        EnvVar::MiraPoolMaxAge.get_value(config.default.mira_pool_max_age);
 
     Ok(config)
 }

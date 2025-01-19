@@ -15,3 +15,4 @@ cdi_mira_amm = "0x2e40f2b244b98ed6b8204b3de0156c6961f98525c8162f80162fcf53eebd90
 mira_swap_event="7938487056892321597"
 mira_create_pool="12224862438738316526"
 mira_total_supply="17462098202904023478"
+mira_pool_max_age=5 #minutes

@@ -11,11 +11,14 @@ use fuels::types::coin_type_id::CoinTypeId::UtxoId;
 use fuels::types::output::Output;
 use fuels::types::param_types::ParamType;
 use num_traits::AsPrimitive;
+use sea_orm::DbErr;
 use serde::Deserialize;
 use uuid::Uuid;
 use crate::config::CONFIG;
-use crate::domain::entity::TokenEntity;
+use crate::domain::entity::{TokenEntity, TokenPairsEntity};
+use crate::domain::entity::mira_pools_entity::MiraPoolsEntity;
 use crate::domain::service::persistence::{SyncStatusService, TokenPairsService, TokenService};
+use crate::domain::service::persistence::mira_pools_service::MiraPoolsService;
 use crate::ports::blockchain::blockchain_data_service::BlockchainDataService;
 use crate::ports::db::database_manager::DB_MANAGER;
 use crate::ports::tx_monitor_poc::MiraEvent;
@@ -107,7 +110,7 @@ impl TxSync{
                                                                                 log::info!("A1 amount: IN:{}, OUT:{}", &event.asset_1_in, &event.asset_1_out);
 
                                                                                 //1. Find pair or if doesn't exist
-                                                                                let token_pair = TokenPairsService::find_or_create_pair(&asset_0_id,&asset_1_id).await;
+                                                                                let token_pair = find_or_create_pair(&asset_0_id, &asset_1_id).await;
                                                                                 //2. Create log
 
 
@@ -158,7 +161,41 @@ impl TxSync{
         }
     }
 
+
 }
+async fn find_or_create_pair(base_token: &TokenEntity, quote_token: &TokenEntity) -> Option<TokenPairsEntity> {
+    match TokenPairsService::find_or_create_pair(&base_token, &quote_token).await{
+        Ok(token_pair) =>{
+            let _ = find_or_create_mira_pool(token_pair.id, &base_token, &quote_token).await;
+            Some(token_pair)
+        }
+        Err(err)=>{
+            log::error!("Error while finding or creating token pair: {}", err);
+            None
+        }
+    }
+
+}
+
+async fn find_or_create_mira_pool(pair_id: Uuid,base_token: &TokenEntity, quote_token: &TokenEntity) -> Option<MiraPoolsEntity>{
+
+    match MiraPoolsService::find_or_create(pair_id, base_token,quote_token).await{
+        Ok(mira_pool)=>{
+            //refresh
+            Some(mira_pool)
+        }
+        Err(err)=>{
+            None
+        }
+    }
+
+
+}
+
+async fn refresh_mira_pool(mira_pool: MiraPoolsEntity) -> MiraPoolsEntity{
+    mira_pool
+}
+
 async fn get_block_time_by_block_height(provider: &Provider, block_height: u32) -> fuels::prelude::Result<DateTime<Utc>> {
     let block = provider.block_by_height(BlockHeight::new(block_height.clone())).await?;
     Ok(block.unwrap().header.time.unwrap())
