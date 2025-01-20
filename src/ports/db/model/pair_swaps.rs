@@ -8,6 +8,7 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
     pub block_number: String,
+    pub block_time: Option<DateTimeWithTimeZone>,
     pub tx_id: String,
     pub utxo_id: String,
     pub pair_id: Uuid,
