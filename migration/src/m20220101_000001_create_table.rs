@@ -20,6 +20,7 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(ColumnDef::new(SyncStatus::Id).uuid().not_null().primary_key().default(Expr::cust("uuid_generate_v4()")))
                     .col(ColumnDef::new(SyncStatus::BlockNumber).unsigned().not_null().default(0))
+                    .col(ColumnDef::new(SyncStatus::BlockTime).timestamp_with_time_zone())
                     .col(ColumnDef::new(SyncStatus::CreatedAt).timestamp_with_time_zone().not_null().default(Expr::cust("NOW()")))
                     .col(ColumnDef::new(SyncStatus::UpdatedAt).timestamp_with_time_zone().not_null().default(Expr::cust("NOW()")))
                     .to_owned(),
@@ -193,6 +194,7 @@ pub enum SyncStatus{
     Table,
     Id,
     BlockNumber,
+    BlockTime,
     CreatedAt,
     UpdatedAt,
 }

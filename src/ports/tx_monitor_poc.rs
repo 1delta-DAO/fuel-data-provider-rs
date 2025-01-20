@@ -13,7 +13,7 @@ use fuels::types::param_types::ParamType;
 use num_traits::AsPrimitive;
 use serde::Deserialize;
 
-pub struct TxMonitor;
+pub struct TxMonitorPOC;
 
 abigen!(
     Contract(
@@ -28,7 +28,7 @@ abigen!(
 static FUEL_TOKEN_GATEWAY_CID: &str = "0x4ea6ccef1215d9479f1024dff70fc055ca538215d2c8c348beddffd54583d0e8";
 static MIRA_AMM_CID: &str = "0x4ea6ccef1215d9479f1024dff70fc055ca538215d2c8c348beddffd54583d0e8";
 static MIRA_AMM_2_CID: &str = "0x2e40f2b244b98ed6b8204b3de0156c6961f98525c8162f80162fcf53eebd90e7"; //To ten
-impl TxMonitor{
+impl TxMonitorPOC {
 
     pub async fn monitor_transactions() -> Result<()> {
         let provider = Provider::connect("https://mainnet.fuel.network").await?;
