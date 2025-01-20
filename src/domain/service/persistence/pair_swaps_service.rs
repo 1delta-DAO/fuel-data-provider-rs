@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use crate::domain::entity::pair_swaps_entity::PairSwapsEntity;
 use crate::ports::db::model::pair_swaps::Model;
 use sea_orm::DbErr;
@@ -39,5 +40,10 @@ impl PairSwapsService {
     /// Deletes a record by its ID
     pub async fn delete(id: Uuid) -> Result<(), DbErr> {
         PairSwapsRepository::delete(id).await
+    }
+
+    /// Deletes all records where `block_time` is older than the given timestamp
+    pub async fn delete_older_than(timestamp: DateTime<Utc>) -> Result<u64, DbErr> {
+        PairSwapsRepository::delete_older_than(timestamp).await
     }
 }

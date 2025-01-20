@@ -40,7 +40,7 @@ impl Entity<Model> for PairSwapsEntity {
         Model {
             id: self.id,
             block_number: self.block_number.clone(),
-            block_time: Some(self.block_time.into()),
+            block_time: self.block_time.map(|dt| dt.into()),
             tx_id: self.tx_id.clone(),
             utxo_id: self.utxo_id.clone(),
             pair_id: self.pair_id,
