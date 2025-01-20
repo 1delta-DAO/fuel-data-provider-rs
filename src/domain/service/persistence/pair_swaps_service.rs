@@ -17,10 +17,13 @@ impl PairSwapsService {
     }
 
     /// Inserts multiple records into the database using domain entities
-    pub async fn create_many(entities: Vec<PairSwapsEntity>) -> Result<(), DbErr> {
+    pub async fn create_many_with_sync(entities: Vec<PairSwapsEntity>,
+                             block_number: i32,
+                             block_time: DateTime<Utc>
+    ) -> Result<(), DbErr> {
         let active_models: Vec<Model> = entities.into_iter().map(|e| e.to_model()).collect();
         let active_models: Vec<_> = active_models.into_iter().map(Into::into).collect();
-        PairSwapsRepository::insert_many(active_models).await
+        PairSwapsRepository::insert_many_with_sync(active_models,block_number,block_time).await
     }
 
     /// Retrieves all records from the database and converts them to domain entities
