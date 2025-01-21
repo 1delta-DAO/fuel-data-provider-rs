@@ -104,6 +104,7 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(ColumnDef::new(PairSwaps::Id).uuid().not_null().primary_key().default(Expr::cust("uuid_generate_v4()")))
                     .col(ColumnDef::new(PairSwaps::BlockNumber).string().not_null())
+                    .col(ColumnDef::new(PairSwaps::BlockTime).timestamp_with_time_zone())
                     .col(ColumnDef::new(PairSwaps::TxId).string().not_null())
                     .col(ColumnDef::new(PairSwaps::UtxoId).string().not_null())
                     .col(ColumnDef::new(PairSwaps::PairId).uuid().not_null())
@@ -167,6 +168,7 @@ pub enum PairSwaps {
     Table,
     Id,
     BlockNumber,
+    BlockTime,
     TxId,
     UtxoId,
     PairId,

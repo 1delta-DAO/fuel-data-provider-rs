@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::net::ToSocketAddrs;
 use std::str::FromStr;
 use fuels::prelude::*;
@@ -18,10 +19,12 @@ use uuid::Uuid;
 use crate::config::CONFIG;
 use crate::domain::entity::{TokenEntity, TokenPairsEntity};
 use crate::domain::entity::mira_pools_entity::MiraPoolsEntity;
-use crate::domain::service::persistence::{SyncStatusService, TokenPairsService, TokenService};
+use crate::domain::entity::pair_swaps_entity::PairSwapsEntity;
+use crate::domain::service::persistence::{PairSwapsService, SyncStatusService, TokenPairsService, TokenService};
 use crate::domain::service::persistence::mira_pools_service::MiraPoolsService;
 use crate::ports::blockchain::blockchain_data_service::BlockchainDataService;
 use crate::ports::db::database_manager::DB_MANAGER;
+use crate::ports::db::model::prelude::PairSwaps;
 use crate::ports::tx_monitor_poc::MiraEvent;
 
 pub struct TxSync;
@@ -64,6 +67,8 @@ impl TxSync{
                         let block = provider.block_by_height(BlockHeight::from(block_height)).await?;
 
                         if let Some(block) = block {
+                            let mut pair_swaps_vec: Vec<PairSwapsEntity> = Vec::new();
+                            let block_time = BlockchainDataService::get_block_time(&provider, &(block_height as u64)).await.unwrap();
                             for tx in block.transactions {
                                 let txr = provider.get_transaction_by_id(&tx).await?.unwrap();
                                 let transaction = txr.transaction.clone();
@@ -113,7 +118,19 @@ impl TxSync{
                                                                                 //1. Find pair or if doesn't exist
                                                                                 let token_pair = find_or_create_pair(&asset_0_id, &asset_1_id).await;
                                                                                 //2. Create log
-
+                                                                                let pair_swap = PairSwapsEntity{
+                                                                                    id: Uuid::new_v4(),
+                                                                                    block_number: block_height.to_string(),
+                                                                                    block_time: Some(block_time),
+                                                                                    tx_id: tx.to_string(),
+                                                                                    utxo_id: input.utxo_id().unwrap_or(&Default::default()).to_string(),
+                                                                                    pair_id: token_pair.unwrap().id,
+                                                                                    base_amount: Decimal::from(event.asset_0_in.clone()),
+                                                                                    quote_amount: Decimal::from(event.asset_1_out.clone()),
+                                                                                    created_at: Utc::now(),
+                                                                                    updated_at: Utc::now(),
+                                                                                };
+                                                                                pair_swaps_vec.push(pair_swap);
 
                                                                             }
                                                                         }else{
@@ -149,6 +166,8 @@ impl TxSync{
                                     }
                                 }
                             }
+                            log::info!("TXS - Block {} - PairSwaps: {}",block_height,pair_swaps_vec.len());
+                            let _ = PairSwapsService::create_many_with_sync(pair_swaps_vec, block_height as i32,block_time).await;
                         }
                     }
                     else{
@@ -206,7 +225,7 @@ async fn get_start_block_number() ->u32 {
     let mut block_number = 0;
     match SyncStatusService::get_status_entity().await {
         Ok(Some(sync_status_entity)) => {
-            block_number = sync_status_entity.block_number as u32
+            block_number = sync_status_entity.block_number as u32 +1
         },
         Ok(None) => { block_number = 0;},
         Err(_) => { block_number = 0; },//TODO - Exception management

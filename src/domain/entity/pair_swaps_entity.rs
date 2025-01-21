@@ -4,9 +4,11 @@ use chrono::{DateTime, Utc};
 use sea_orm::prelude::Decimal;
 use uuid::Uuid;
 
+#[derive(Eq, Hash, PartialEq)]
 pub struct PairSwapsEntity {
     pub id: Uuid,
     pub block_number: String,
+    pub block_time: Option<DateTime<Utc>>,
     pub tx_id: String,
     pub utxo_id: String,
     pub pair_id: Uuid,
@@ -18,9 +20,13 @@ pub struct PairSwapsEntity {
 
 impl Entity<Model> for PairSwapsEntity {
     fn from_model(model: &Model) -> Self {
+
+        let block_time: Option<DateTime<Utc>> = model.block_time.map(|bt| bt.with_timezone(&Utc));
+
         Self {
             id: model.id,
             block_number: model.block_number.clone(),
+            block_time,
             tx_id: model.tx_id.clone(),
             utxo_id: model.utxo_id.clone(),
             pair_id: model.pair_id,
@@ -35,6 +41,7 @@ impl Entity<Model> for PairSwapsEntity {
         Model {
             id: self.id,
             block_number: self.block_number.clone(),
+            block_time: self.block_time.map(|dt| dt.into()),
             tx_id: self.tx_id.clone(),
             utxo_id: self.utxo_id.clone(),
             pair_id: self.pair_id,
@@ -49,8 +56,9 @@ impl Entity<Model> for PairSwapsEntity {
 impl Default for PairSwapsEntity {
     fn default() -> Self {
         Self {
-            id: Uuid::new_v4(),
+            id: Uuid::nil(),
             block_number: String::new(),
+            block_time: None,
             tx_id: String::new(),
             utxo_id: String::new(),
             pair_id: Uuid::new_v4(),
