@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::net::ToSocketAddrs;
 use std::str::FromStr;
 use fuels::prelude::*;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use chrono::{DateTime, Utc};
 use fuels::tx::TxParameters;
 use fuels::types::BlockHeight;
@@ -53,12 +53,19 @@ impl TxSync{
         let mut start_block:u32 = get_start_block_number().await;
         log::info!(" TXS: Starting from block: {}",start_block);
 
+        let bench_1 = Instant::now();
+
         let start_block_time = get_block_time_by_block_height(&provider, start_block).await;
+
+        log::info!("B1 - Get block time: {:?}",bench_1.elapsed());
 
         log::info!("TXS - Start block time: {:?}",start_block_time);
 
         loop {
+            let bench_2 = Instant::now();
             let current_block = provider.latest_block_height().await?;
+
+            log::info!("B2 - Get latest block: {:?}",bench_2.elapsed());
 
             if current_block > start_block {
                 for block_height in start_block..=current_block {
@@ -70,7 +77,9 @@ impl TxSync{
                             let mut pair_swaps_vec: Vec<PairSwapsEntity> = Vec::new();
                             let block_time = BlockchainDataService::get_block_time(&provider, &(block_height as u64)).await.unwrap();
                             for tx in block.transactions {
+                                let bench_4 = Instant::now();
                                 let txr = provider.get_transaction_by_id(&tx).await?.unwrap();
+                                log::info!("B4 - Get tx: {:?}",bench_4.elapsed());
                                 let transaction = txr.transaction.clone();
                                 let receipts = txr.status.clone().take_receipts();
                                 match transaction {
@@ -237,6 +246,8 @@ async fn get_start_block_number() ->u32 {
 }
 
 async fn is_block_in_calc_window(provider: &Provider, block_number: u64) -> bool{
+
+    let bench_3 = Instant::now();
     // Fetch the block time
     let block_time_result = BlockchainDataService::get_block_time(provider, &block_number).await;
 
@@ -256,6 +267,7 @@ async fn is_block_in_calc_window(provider: &Provider, block_number: u64) -> bool
     let cutoff_time = Utc::now() - Duration::from_hours(window_range_hours as u64);
 
     // Check if the block_time is within the calculation window
+    log::info!("B3 - Get block time: {:?}",bench_3.elapsed());
     block_time >= cutoff_time
 }
 
@@ -283,18 +295,27 @@ async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -
         ::from(ContractId::from_str("0x0ceafc5ef55c66912e855917782a3804dc489fb9e27edfd3621ea47d2a281156")
             .unwrap_or(ContractId::zeroed()));
 
+        let bench_5 = Instant::now();
         let response = fuel_token_gateway.methods().name(asset_id.clone()).with_contract_ids(&[benchContract.clone(),
         ]).simulate(Execution::StateReadOnly).await;
+
+        log::info!("B5 - Get token name: {:?}",bench_5.elapsed());
 
         match response{
             Ok(call_response) => {
                 match call_response.value {
                     Some(token_name) => {
+                        let bench_6 = Instant::now();
                         let token_symbol = fuel_token_gateway.methods().symbol(asset_id.clone()).with_contract_ids(&[benchContract.clone(),
                         ]).simulate(Execution::StateReadOnly).await?.value.unwrap();
 
+                        log::info!("B6 - Get token symbol: {:?}",bench_6.elapsed());
+
+                        let bench_7 = Instant::now();
                         let token_decimals = fuel_token_gateway.methods().decimals(asset_id.clone()).with_contract_ids(&[benchContract.clone(),
                         ]).simulate(Execution::StateReadOnly).await?.value.unwrap();
+
+                        log::info!("B7 - Get token decimals: {:?}",bench_7.elapsed());
 
                         let token_entity = TokenEntity{
                             id: Uuid::new_v4(),
