@@ -39,14 +39,14 @@ abigen!(
         abi = "resources/abi/mira_amm_contract/out/debug/mira_amm_contract-abi.json"
     ),
 );
-static FUEL_TOKEN_GATEWAY_CID: &str = "0x4ea6ccef1215d9479f1024dff70fc055ca538215d2c8c348beddffd54583d0e8";
-static MIRA_AMM_CID: &str = "0x4ea6ccef1215d9479f1024dff70fc055ca538215d2c8c348beddffd54583d0e8";
-static MIRA_AMM_2_CID: &str = "0x2e40f2b244b98ed6b8204b3de0156c6961f98525c8162f80162fcf53eebd90e7";
+//static FUEL_TOKEN_GATEWAY_CID: &str = CONFIG.default.cdi_fuel_token_gateway.as_str();
+//static MIRA_AMM_CID: &str = CONFIG.default.cdi_mira_amm.as_str();
+//static MIRA_AMM_2_CID: &str = "0x2e40f2b244b98ed6b8204b3de0156c6961f98525c8162f80162fcf53eebd90e7";
 
 
 impl TxSync{
     pub async fn synchronize_transactions() -> Result<()> {
-        let provider = Provider::connect("https://mainnet.fuel.network").await?;
+        let provider = Provider::connect(CONFIG.default.rpc_url.as_str()).await?;
         let mut wallet = WalletUnlocked::new_random(None);
         wallet.set_provider(provider.clone());
 
@@ -273,14 +273,14 @@ async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -
         let mut wallet = WalletUnlocked::new_random(None);
         wallet.set_provider(provider.clone());
 
-        let contract_id = ContractId::from_str(FUEL_TOKEN_GATEWAY_CID).unwrap_or(ContractId::zeroed());
+        let contract_id = ContractId::from_str(CONFIG.default.cdi_fuel_token_gateway.as_str()).unwrap_or(ContractId::zeroed());
         let fuel_token_gateway = crate::ports::tx_monitor_poc::FuelTokenGateway::new(contract_id, wallet);
 
         //TODO: There has to be more efficient way to take all this data at once
 
 
         let benchContract = Bech32ContractId
-        ::from(ContractId::from_str("0x0ceafc5ef55c66912e855917782a3804dc489fb9e27edfd3621ea47d2a281156")
+        ::from(ContractId::from_str(CONFIG.default.cdi_fuel_token_gateway_dependency.as_str())
             .unwrap_or(ContractId::zeroed()));
 
         let response = fuel_token_gateway.methods().name(asset_id.clone()).with_contract_ids(&[benchContract.clone(),
@@ -329,12 +329,12 @@ async fn get_mira_pool_metadata(mut pool: MiraPoolsEntity) ->MiraPoolsEntity{
 
             let token_pair = result.unwrap();
 
-            let provider = Provider::connect("https://mainnet.fuel.network").await.unwrap();
+            let provider = Provider::connect(CONFIG.default.rpc_url.as_str()).await.unwrap();
             let mut wallet = WalletUnlocked::new_random(None);
             wallet.set_provider(provider.clone());
 
 
-            let mira_cid = ContractId::from_str(MIRA_AMM_2_CID)
+            let mira_cid = ContractId::from_str(CONFIG.default.cdi_mira_amm.as_str())
                 .unwrap_or(ContractId::zeroed());
 
             let mira_contract = MiraV1Core::new(mira_cid,wallet);

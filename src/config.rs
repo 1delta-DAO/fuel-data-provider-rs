@@ -20,6 +20,7 @@ pub struct DefaultConfig {
     pub tx_log_start_block_number: u64,
     pub calculation_window: u16,
     pub cdi_fuel_token_gateway: String,
+    pub cdi_fuel_token_gateway_dependency: String,
     pub cdi_mira_amm: String,
     pub mira_swap_event: String,
     pub mira_create_pool: String,
@@ -45,6 +46,7 @@ pub enum EnvVar {
     TxLogStartBlockNumber,
     CalculationWindow,
     CdiFuelTokenGateway,
+    CdiFuelTokenGatewayDependency,
     CdiMiraAmm,
     MiraSwapEvent,
     MiraCreatePool,
@@ -68,6 +70,7 @@ impl fmt::Display for EnvVar {
             EnvVar::TxLogStartBlockNumber => "TX_LOG_START_BLOCK_NUMBER",
             EnvVar::CalculationWindow => "CALCULATION_WINDOW",
             EnvVar::CdiFuelTokenGateway => "CDI_FUEL_TOKEN_GATEWAY",
+            EnvVar::CdiFuelTokenGatewayDependency => "CDI_FUEL_TOKEN_GATEWAY_DEPENDENCY",
             EnvVar::CdiMiraAmm => "CDI_MIRA_AMM",
             EnvVar::MiraSwapEvent => "MIRA_SWAP_EVENT",
             EnvVar::MiraCreatePool => "MIRA_CREATE_POOL",
@@ -128,8 +131,12 @@ pub fn load_config_from_env_or_file() -> Result<AppConfig, Box<dyn Error>> {
         EnvVar::TxLogStartBlockNumber.get_value(config.default.tx_log_start_block_number);
     config.default.calculation_window =
         EnvVar::CalculationWindow.get_value(config.default.calculation_window);
-    config.default.mira_pool_max_age =
-        EnvVar::MiraPoolMaxAge.get_value(config.default.mira_pool_max_age);
-
+    config.default.cdi_fuel_token_gateway = EnvVar::CdiFuelTokenGateway.get_value(config.default.cdi_fuel_token_gateway.clone());
+    config.default.cdi_fuel_token_gateway_dependency = EnvVar::CdiFuelTokenGatewayDependency.get_value(config.default.cdi_fuel_token_gateway_dependency.clone());
+    config.default.cdi_mira_amm = EnvVar::CdiMiraAmm.get_value(config.default.cdi_mira_amm.clone());
+    config.default.mira_swap_event = EnvVar::MiraSwapEvent.get_value(config.default.mira_swap_event.clone());
+    config.default.mira_create_pool = EnvVar::MiraCreatePool.get_value(config.default.mira_create_pool.clone());
+    config.default.mira_total_supply = EnvVar::MiraTotalSupply.get_value(config.default.mira_total_supply.clone());
+    config.default.mira_pool_max_age = EnvVar::MiraPoolMaxAge.get_value(config.default.mira_pool_max_age);
     Ok(config)
 }
