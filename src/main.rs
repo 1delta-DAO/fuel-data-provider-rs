@@ -22,9 +22,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     log::info!("Config: {}", CONFIG.default.server_port_http);
     let _ = DB_MANAGER.initialize().await;
 
-    let tx_sync_handle = tokio::spawn(async{
-        log::info!("Starting TX Sync service ...");
-        match TxSync::synchronize_transactions().await{
+    let tx_sync_handle_one = tokio::spawn(async{
+        log::info!("Starting TX Sync service - Runner 1 ...");
+        match TxSync::synchronize_transactions(1).await{
+            Ok(_) => println!("Synchronization finished successfully."),
+            Err(e) => eprintln!("Error occurred: {}", e),
+        }
+    });
+
+    let tx_sync_handle_two = tokio::spawn(async{
+        tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+        log::info!("Starting TX Sync service - Runner 2 ...");
+        match TxSync::synchronize_transactions(2).await{
+            Ok(_) => println!("Synchronization finished successfully."),
+            Err(e) => eprintln!("Error occurred: {}", e),
+        }
+    });
+
+    let tx_sync_handle_three = tokio::spawn(async{
+        tokio::time::sleep(std::time::Duration::from_secs(20)).await;
+        log::info!("Starting TX Sync service - Runner 3 ...");
+        match TxSync::synchronize_transactions(3).await{
+            Ok(_) => println!("Synchronization finished successfully."),
+            Err(e) => eprintln!("Error occurred: {}", e),
+        }
+    });
+
+    let tx_sync_handle_four = tokio::spawn(async{
+        tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+        log::info!("Starting TX Sync service - Runner 4 ...");
+        match TxSync::synchronize_transactions(4).await{
+            Ok(_) => println!("Synchronization finished successfully."),
+            Err(e) => eprintln!("Error occurred: {}", e),
+        }
+    });
+
+    let tx_sync_handle_five = tokio::spawn(async{
+        tokio::time::sleep(std::time::Duration::from_secs(40)).await;
+        log::info!("Starting TX Sync service - Runner 5 ...");
+        match TxSync::synchronize_transactions(5).await{
             Ok(_) => println!("Synchronization finished successfully."),
             Err(e) => eprintln!("Error occurred: {}", e),
         }
@@ -38,7 +74,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });*/
 
-    if let Err(e) = tokio::try_join!(tx_sync_handle) {
+    if let Err(e) = tokio::try_join!(
+        tx_sync_handle_one,
+        tx_sync_handle_two,
+        tx_sync_handle_three,
+        tx_sync_handle_four,
+        tx_sync_handle_five) {
         log::error!("Error occurred while joining tasks: {:?}", e);
     }
 

@@ -45,28 +45,34 @@ abigen!(
 
 
 impl TxSync{
-    pub async fn synchronize_transactions() -> Result<()> {
+    pub async fn synchronize_transactions(runner_id: u8) -> Result<()> {
         let provider = Provider::connect(CONFIG.default.rpc_url.as_str()).await?;
         let mut wallet = WalletUnlocked::new_random(None);
         wallet.set_provider(provider.clone());
 
         let mut start_block:u32 = get_start_block_number().await;
-        log::info!(" TXS: Starting from block: {}",start_block);
+        log::info!(" TXS-{}: Starting from block: {}",runner_id,start_block);
 
         let start_block_time = get_block_time_by_block_height(&provider, start_block).await;
 
-        log::info!("TXS - Start block time: {:?}",start_block_time);
+        log::info!("TXS-{}: - Start block time: {:?}",runner_id,start_block_time);
 
         loop {
             let current_block = provider.latest_block_height().await?;
 
             if current_block > start_block {
                 for block_height in start_block..=current_block {
+                    log::info!("TXS-{}: - Block {} - Start",runner_id,block_height);
 
                     if is_block_in_calc_window(&provider, block_height as u64).await {
                         let block = provider.block_by_height(BlockHeight::from(block_height)).await?;
 
                         if let Some(block) = block {
+                            if PairSwapsService::exists_by_block_number(block_height as i32).await{
+                                log::info!("TXS-{}: - Block {} - PairSwaps already exists - skipped",runner_id,block_height);
+                                continue;
+                            }
+
                             let mut pair_swaps_vec: Vec<PairSwapsEntity> = Vec::new();
                             let block_time = BlockchainDataService::get_block_time(&provider, &(block_height as u64)).await.unwrap();
                             for tx in block.transactions {
@@ -78,7 +84,7 @@ impl TxSync{
                                         //log::info!("MINT TX");
                                     },
                                     TransactionType::Script(script_tx) => {
-                                        log::info!("SCRIPT TX");
+                                        log::info!("TXS-{}: SCRIPT TX",runner_id);
                                         let mira_contract_id = ContractId::from_str(CONFIG.default.cdi_mira_amm.as_str())?;
                                         for input in script_tx.inputs() {
                                             let cid = input.contract_id();
@@ -101,19 +107,19 @@ impl TxSync{
 
                                                                 match MiraEvent::from_u64(log_id) {
                                                                     Some(MiraEvent::Swap) => {
-                                                                        log::info!("SwapEvent");
-                                                                        log::info!("BlockID: {}", block_height );
-                                                                        log::info!("TX: {}",tx);
-                                                                        log::info!("Input: {}",input.utxo_id().unwrap_or(&Default::default()));
+                                                                        log::info!("TXS-{}: SwapEvent",runner_id);
+                                                                        log::info!("TXS-{}: BlockID: {}",runner_id, block_height );
+                                                                        log::info!("TXS-{}: TX: {}",runner_id,tx);
+                                                                        log::info!("TXS-{}: Input: {}",runner_id,input.utxo_id().unwrap_or(&Default::default()));
                                                                         //log::info!("{:?}",receipt);
                                                                         let event = SwapEvent::try_from(receipt.data().unwrap()).unwrap();
                                                                         //log::info!("{:?}",event);
                                                                         if let Some(asset_0_id) = get_token_details_by_asset_id(&provider, &event.pool_id.0).await? {
                                                                             if let Some(asset_1_id) = get_token_details_by_asset_id(&provider, &event.pool_id.1).await?{
-                                                                                log::info!("A0: {:?}",asset_0_id);
-                                                                                log::info!("A0 amount: IN:{}, OUT:{}", &event.asset_0_in, &event.asset_0_out);
-                                                                                log::info!("A1: {:?}",asset_1_id);
-                                                                                log::info!("A1 amount: IN:{}, OUT:{}", &event.asset_1_in, &event.asset_1_out);
+                                                                                log::info!("TXS-{}: A0: {:?}",runner_id,asset_0_id);
+                                                                                log::info!("TXS-{}: A0 amount: IN:{}, OUT:{}",runner_id, &event.asset_0_in, &event.asset_0_out);
+                                                                                log::info!("TXS-{}: A1: {:?}",runner_id,asset_1_id);
+                                                                                log::info!("TXS-{}: A1 amount: IN:{}, OUT:{}",runner_id, &event.asset_1_in, &event.asset_1_out);
 
                                                                                 //1. Find pair or if doesn't exist
                                                                                 let token_pair = find_or_create_pair(&asset_0_id, &asset_1_id).await;
@@ -138,13 +144,13 @@ impl TxSync{
                                                                         }
                                                                     }
                                                                     Some(MiraEvent::CreatePool) => {
-                                                                        log::info!("CreatePoolEvent");
+                                                                        log::info!("TXS-{}: CreatePoolEvent",runner_id);
                                                                     }
                                                                     Some(MiraEvent::TotalSupply) => {
-                                                                        log::info!("TotalSupplyEvent");
+                                                                        log::info!("TXS-{}: TotalSupplyEvent",runner_id);
                                                                     }
                                                                     None => {
-                                                                        log::info!("OtherType log_id: {}", log_id);
+                                                                        log::info!("TXS-{}: OtherType log_id: {}",runner_id, log_id);
                                                                     }
                                                                 }
                                                             }
@@ -162,16 +168,16 @@ impl TxSync{
                                     },
 
                                     _ => {
-                                        log::info!("Other TX type");
+                                        log::info!("TXS-{}: Other TX type",runner_id);
                                     }
                                 }
                             }
-                            log::info!("TXS - Block {} - PairSwaps: {}",block_height,pair_swaps_vec.len());
+                            log::info!("TXS-{}: - Block {} - PairSwaps: {}",runner_id,block_height,pair_swaps_vec.len());
                             let _ = PairSwapsService::create_many_with_sync(pair_swaps_vec, block_height as i32,block_time).await;
                         }
                     }
                     else{
-                        log::info!("Block {} out of calc window - skipped",block_height);
+                        log::info!("TXS-{}: Block {} out of calc window - skipped",runner_id,block_height);
                     }
 
                 }
