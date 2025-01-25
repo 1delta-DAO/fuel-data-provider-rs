@@ -46,7 +46,7 @@ static MIRA_AMM_2_CID: &str = "0x2e40f2b244b98ed6b8204b3de0156c6961f98525c8162f8
 
 impl TxSync{
     pub async fn synchronize_transactions() -> Result<()> {
-        let provider = Provider::connect("https://mainnet.fuel.network").await?;
+        let provider = Provider::connect("https://autumn-magical-glade.fuel-mainnet.quiknode.pro/v1/graphql").await?;
         let mut wallet = WalletUnlocked::new_random(None);
         wallet.set_provider(provider.clone());
 
