@@ -46,6 +46,18 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
+        // Create table `token`
+        manager
+            .create_table(
+                Table::create()
+                    .table(UnknownToken::Table)
+                    .if_not_exists()
+                    .col(ColumnDef::new(UnknownToken::Id).uuid().not_null().primary_key().default(Expr::cust("uuid_generate_v4()")))
+                    .col(ColumnDef::new(UnknownToken::Address).string().not_null().unique_key())
+                    .to_owned(),
+            )
+            .await?;
+
         manager
             .create_table(
                 Table::create()
@@ -131,6 +143,7 @@ impl MigrationTrait for Migration {
         manager.drop_table(Table::drop().table(MiraPools::Table).to_owned()).await?;
         manager.drop_table(Table::drop().table(TokenPairs::Table).to_owned()).await?;
         manager.drop_table(Table::drop().table(Token::Table).to_owned()).await?;
+        manager.drop_table(Table::drop().table(UnknownToken::Table).to_owned()).await?;
         Ok(())
     }
 }
@@ -149,6 +162,14 @@ pub enum Token {
     HighRisk,
     NoLiquidity,
 }
+
+#[derive(Iden)]
+pub enum UnknownToken {
+    Table,
+    Id,
+    Address,
+}
+
 
 #[derive(Iden)]
 pub enum TokenPairs {

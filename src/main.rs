@@ -75,11 +75,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });*/
 
     if let Err(e) = tokio::try_join!(
-        tx_sync_handle_one,
+        tx_sync_handle_one
+/*        ,
         tx_sync_handle_two,
         tx_sync_handle_three,
         tx_sync_handle_four,
-        tx_sync_handle_five) {
+        tx_sync_handle_five*/
+        ) {
         log::error!("Error occurred while joining tasks: {:?}", e);
     }
 

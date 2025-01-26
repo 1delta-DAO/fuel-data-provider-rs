@@ -13,4 +13,12 @@ impl SyncStatusService{
             Err(err) => Err(err),
         }
     }
+
+    pub async fn get_block_number() -> Result<Option<i32>, DbErr> {
+        match SyncStatusRepository::get_status().await {
+            Ok(Some(model)) => Ok(Some(model.block_number)),
+            Ok(None) => Ok(None),
+            Err(err) => Err(err),
+        }
+    }
 }

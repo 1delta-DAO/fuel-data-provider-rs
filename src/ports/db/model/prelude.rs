@@ -5,3 +5,4 @@ pub use super::pair_swaps::Entity as PairSwaps;
 pub use super::sync_status::Entity as SyncStatus;
 pub use super::token::Entity as Token;
 pub use super::token_pairs::Entity as TokenPairs;
+pub use super::unknown_token::Entity as UnknownToken;

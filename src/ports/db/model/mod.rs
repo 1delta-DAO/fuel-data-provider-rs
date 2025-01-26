@@ -7,3 +7,4 @@ pub mod pair_swaps;
 pub mod sync_status;
 pub mod token;
 pub mod token_pairs;
+pub mod unknown_token;
