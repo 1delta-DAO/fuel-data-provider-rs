@@ -281,7 +281,7 @@ async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -
         wallet.set_provider(provider.clone());
 
         let contract_id = ContractId::from_str(CONFIG.default.cdi_fuel_token_gateway.as_str()).unwrap_or(ContractId::zeroed());
-        let fuel_token_gateway = crate::ports::tx_monitor_poc::FuelTokenGateway::new(contract_id, wallet);
+        let fuel_token_gateway = FuelTokenGateway::new(contract_id, wallet);
 
         //TODO: There has to be more efficient way to take all this data at once
 
