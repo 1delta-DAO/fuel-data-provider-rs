@@ -26,6 +26,8 @@ pub struct DefaultConfig {
     pub mira_create_pool: String,
     pub mira_total_supply: String,
     pub mira_pool_max_age: u8,
+    pub sentio_url: String,
+    pub sentio_api_key: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -52,6 +54,8 @@ pub enum EnvVar {
     MiraCreatePool,
     MiraTotalSupply,
     MiraPoolMaxAge,
+    SentioUrl,
+    SentioApiKey,
 }
 
 // Implement Display for EnvVar to convert to string
@@ -76,6 +80,8 @@ impl fmt::Display for EnvVar {
             EnvVar::MiraCreatePool => "MIRA_CREATE_POOL",
             EnvVar::MiraTotalSupply => "MIRA_TOTAL_SUPPLY",
             EnvVar::MiraPoolMaxAge => "MIRA_POOL_MAX_AGE",
+            EnvVar::SentioUrl => "SENTIO_URL",
+            EnvVar::SentioApiKey => "SENTIO_API_KEY",
         };
         write!(f, "{}", name)
     }
@@ -138,5 +144,7 @@ pub fn load_config_from_env_or_file() -> Result<AppConfig, Box<dyn Error>> {
     config.default.mira_create_pool = EnvVar::MiraCreatePool.get_value(config.default.mira_create_pool.clone());
     config.default.mira_total_supply = EnvVar::MiraTotalSupply.get_value(config.default.mira_total_supply.clone());
     config.default.mira_pool_max_age = EnvVar::MiraPoolMaxAge.get_value(config.default.mira_pool_max_age);
+    config.default.sentio_url = EnvVar::SentioUrl.get_value(config.default.sentio_url.clone());
+    config.default.sentio_api_key = EnvVar::SentioApiKey.get_value(config.default.sentio_api_key.clone());
     Ok(config)
 }

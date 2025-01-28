@@ -18,3 +18,5 @@ mira_swap_event="7938487056892321597"
 mira_create_pool="12224862438738316526"
 mira_total_supply="17462098202904023478"
 mira_pool_max_age=5 #minutes
+sentio_url="https://endpoint.sentio.xyz/1delta/fuel-subgraph/swap"
+sentio_api_key="mHWELZ01Oo3BRfGb0WrhFvryge78baQVT"
