@@ -76,6 +76,16 @@ impl PairSwapsRepository {
             .await
     }
 
+    /// Finds all records with the given block_number
+    pub async fn find_by_block_number(block_number: i32) -> Result<Vec<Model>, DbErr> {
+        let db = crate::ports::db::database_manager::DB_MANAGER.get_connection().await.unwrap();
+
+        pair_swaps::Entity::find()
+            .filter(pair_swaps::Column::BlockNumber.eq(block_number.to_string()))
+            .all(&db)
+            .await
+    }
+
     /// Deletes all records where `block_time` is older than the provided timestamp
     pub async fn delete_older_than(timestamp: DateTime<Utc>) -> Result<u64, DbErr> {
         let db = crate::ports::db::database_manager::DB_MANAGER.get_connection().await.unwrap();

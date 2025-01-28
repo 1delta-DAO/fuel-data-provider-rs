@@ -40,6 +40,18 @@ impl PairSwapsService {
         }
     }
 
+    /// Checks if there is at least one record with the given block_number.
+    /// Returns `true` if a record exists, `false` otherwise (including error cases).
+    pub async fn exists_by_block_number(block_number: i32) -> bool {
+        match PairSwapsRepository::find_by_block_number(block_number).await {
+            Ok(result) => !result.is_empty(),
+            Err(err) => {
+                eprintln!("Error checking block number existence: {:?}", err);
+                false
+            }
+        }
+    }
+
     /// Deletes a record by its ID
     pub async fn delete(id: Uuid) -> Result<(), DbErr> {
         PairSwapsRepository::delete(id).await
