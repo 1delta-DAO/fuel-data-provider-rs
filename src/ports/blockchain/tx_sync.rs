@@ -292,7 +292,7 @@ async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -
 
         let response = fuel_token_gateway.methods().name(asset_id.clone()).with_contract_ids(&[benchContract.clone(),
         ]).simulate(Execution::StateReadOnly).await;
-        log::info!("TOKEN FROM GATEWAY {:?}",response);
+        //log::info!("TOKEN FROM GATEWAY {:?}",response);
 
         match response{
             Ok(call_response) => {
@@ -317,13 +317,98 @@ async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -
                         Ok(Some(TokenService::create(token_entity).await.unwrap()))
                     },
                     None => {
-                        log::info!("No asset found - int");
+                        log::info!("No asset found - int - switch to Mira");
+                        if let Some(token_entity) = get_mira_token_details_by_asset_id(provider,asset_id).await?{
+                         Ok(Some(token_entity))
+                        }else{
+                            Ok(None)
+                        }
+
+                    },
+                }
+            }
+            Err(e) => {
+                log::info!("No asset found - ext - switch to Mira");
+
+                if let Some(token_entity) = get_mira_token_details_by_asset_id(provider,asset_id).await?{
+                    Ok(Some(token_entity))
+                }else{
+                    let unknown_token = UnknownTokenEntity{
+                        id: Uuid::new_v4(),
+                        address: asset_id.to_string(),
+                    };
+                    let _ = UnknownTokenService::create_if_not_exists(unknown_token).await;
+                    Ok(None)
+                }
+            }
+        }
+    }
+
+}
+
+async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>>{
+
+    log::info!("Fetching mira token details by asset_id: {}",asset_id.to_string());
+    let token = TokenService::find_by_address(&asset_id.to_string()).await.unwrap();
+
+    if token.is_some(){
+        log::info!("Token found in DB");
+        Ok(token)
+    }
+    else{
+        log::info!("Token not found - fetching from gateway ....");
+
+        let mut wallet = WalletUnlocked::new_random(None);
+        wallet.set_provider(provider.clone());
+
+        let mira_cid = ContractId::from_str(CONFIG.default.cdi_mira_amm.as_str())
+            .unwrap_or(ContractId::zeroed());
+        let mira_contract = MiraV1Core::new(mira_cid, wallet);
+
+        //TODO: There has to be more efficient way to take all this data at once
+
+
+        let benchContract = Bech32ContractId
+        ::from(ContractId::from_str(CONFIG.default.cdi_fuel_token_gateway_dependency.as_str())
+            .unwrap_or(ContractId::zeroed()));
+
+        let response = mira_contract.methods().name(asset_id.clone())
+            //.with_contract_ids(&[benchContract.clone(), ])
+        .simulate(Execution::StateReadOnly).await;
+        //log::info!("MIRA TOKEN FROM GATEWAY {:?}",response);
+
+        match response{
+            Ok(call_response) => {
+                match call_response.value {
+                    Some(token_name) => {
+                        log::info!("MIRA TOKEN NAME: {:?}",token_name);
+                        let token_symbol = mira_contract.methods().symbol(asset_id.clone()).with_contract_ids(&[benchContract.clone(),
+                        ]).simulate(Execution::StateReadOnly).await?.value.unwrap();
+                        log::info!("MIRA TOKEN SYMBOL: {:?}",token_symbol);
+                        let token_decimals = mira_contract.methods().decimals(asset_id.clone()).with_contract_ids(&[benchContract.clone(),
+                        ]).simulate(Execution::StateReadOnly).await?.value.unwrap();
+                        log::info!("MIRA TOKEN DECIMALS: {:?}",token_decimals);
+
+                        let token_entity = TokenEntity{
+                            id: Uuid::new_v4(),
+                            address: asset_id.to_string(),
+                            symbol: token_symbol,
+                            name: token_name,
+                            decimals: token_decimals as i32,
+                            created_at: Utc::now(),
+                            updated_at: Utc::now(),
+                        };
+                        log::info!("Mira - All data ready to create new Token entity: {:?}",token_entity);
+                        Ok(Some(TokenService::create(token_entity).await.unwrap()))
+                    },
+                    None => {
+                        log::info!("Mira - No asset found - int");
                         Ok(None)
                     },
                 }
             }
             Err(e) => {
-                log::info!("No asset found - ext");
+                log::info!("Mira - No asset found - ext");
                 let unknown_token = UnknownTokenEntity{
                     id: Uuid::new_v4(),
                     address: asset_id.to_string(),
@@ -335,6 +420,7 @@ async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -
     }
 
 }
+
 
 async fn get_mira_pool_metadata(mut pool: MiraPoolsEntity) -> MiraPoolsEntity {
     match TokenPairsService::find_by_id(pool.pair_id).await {
