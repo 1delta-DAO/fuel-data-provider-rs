@@ -28,7 +28,9 @@ impl SubgraphQueryService {
     pub async fn get_logs_by_block_number(&self, block_number: u32) -> Result<Vec<SwapData>, Box<dyn std::error::Error>> {
 
 
-        let raw_data = format!(r#"{{ "block_number": "{}" }}"#, block_number.to_string());
+        let raw_data = format!(r#"{{ "block_number_start": "{}","block_number_end":"{}" }}"#,
+                               block_number.to_string(),
+                        block_number.to_string());
 
         let response = self
             .client
