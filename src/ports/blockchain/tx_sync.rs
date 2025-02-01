@@ -83,7 +83,7 @@ impl TxSync{
                                     //swap.
                                     //log::info!("Swap: {:?}",swap);
 
-                                    let pool = Pool::from_pool_id(&swap.poolId).unwrap();
+                                    let pool = Pool::from_pool_id(&swap.pool_id).unwrap();
                                     //log::info!("Pool: {:?}",pool);
                                     let token_base
                                         = get_mira_token_details_by_asset_id(&provider,&AssetId::from_str(pool.token0_address.as_str()).unwrap()).await.unwrap_or(None);

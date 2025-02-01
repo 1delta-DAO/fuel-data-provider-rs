@@ -10,7 +10,7 @@ pub struct SwapData {
     pub distinct_event_id: String,
     pub event_name: String,
     pub log_index: u64,
-    pub poolId: String,
+    pub pool_id: String,
     pub recipient: String,
     pub timestamp: String,
     pub token0In: String,
@@ -54,11 +54,11 @@ pub struct SyncSqlResult {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct SyncSqlResponse {
-    pub runtimeCost: String,
+    pub runtime_cost: String,
     pub result: SyncSqlResult,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ApiResponse {
-    pub syncSqlResponse: SyncSqlResponse,
+    pub sync_sql_response: SyncSqlResponse,
 }

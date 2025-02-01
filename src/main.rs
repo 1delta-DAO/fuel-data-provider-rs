@@ -41,6 +41,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    /*
+
     let tx_sync_handle_two = tokio::spawn(async{
         tokio::time::sleep(std::time::Duration::from_secs(10)).await;
         log::info!("Starting TX Sync service - Runner 2 ...");
@@ -77,6 +79,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    */
+
 /*    let tx_handle = tokio::spawn(async {
         log::info!("Starting TX monitoring service ...");
         match TxMonitorPOC::monitor_transactions().await {
@@ -85,13 +89,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });*/
 
-    if let Err(e) = tokio::try_join!(
-        tx_sync_handle_one
-/*        ,
+    /*        ,
         tx_sync_handle_two,
         tx_sync_handle_three,
         tx_sync_handle_four,
         tx_sync_handle_five*/
+
+
+    if let Err(e) = tokio::try_join!(
+        tx_sync_handle_one
         ) {
         log::error!("Error occurred while joining tasks: {:?}", e);
     }

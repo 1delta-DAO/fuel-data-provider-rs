@@ -45,7 +45,7 @@ impl SubgraphQueryService {
         }
 
         let parsed_response = response.json::<ApiResponse>().await?;
-        let rows = parsed_response.syncSqlResponse.result.rows;
+        let rows = parsed_response.sync_sql_response.result.rows;
 
         Ok(rows)
 
@@ -118,7 +118,7 @@ impl SubgraphQueryService {
 
             let parsed_response = response.json::<ApiResponse>().await?;
             log::info!("Parsed response: {:?}", parsed_response);
-            let rows = parsed_response.syncSqlResponse.result.rows;
+            let rows = parsed_response.sync_sql_response.result.rows;
             last_batch_size = rows.len();
 
             if rows.is_empty() {
@@ -130,7 +130,7 @@ impl SubgraphQueryService {
             let initial_size = cache.len();
 
             for row in rows {
-                if(cache.contains_key(&row.transaction_hash)) {
+                if cache.contains_key(&row.transaction_hash) {
                     //log::warn!("Record duplicated: {:?}", row);
                 }
                 cache.insert(row.transaction_hash.clone(), row);
