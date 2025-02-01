@@ -27,7 +27,6 @@ use crate::ports::db::database_manager::DB_MANAGER;
 use crate::ports::db::model::prelude::PairSwaps;
 use crate::ports::db::model::unknown_token;
 use crate::ports::sentio::{Pool, SubgraphQueryService};
-use crate::ports::tx_monitor_poc::MiraEvent;
 
 pub struct TxSync;
 
@@ -41,10 +40,6 @@ abigen!(
         abi = "resources/abi/mira_amm_contract/out/debug/mira_amm_contract-abi.json"
     ),
 );
-//static FUEL_TOKEN_GATEWAY_CID: &str = CONFIG.default.cdi_fuel_token_gateway.as_str();
-//static MIRA_AMM_CID: &str = CONFIG.default.cdi_mira_amm.as_str();
-//static MIRA_AMM_2_CID: &str = "0x2e40f2b244b98ed6b8204b3de0156c6961f98525c8162f80162fcf53eebd90e7";
-
 
 impl TxSync{
     pub async fn synchronize_transactions(runner_id: u8) -> Result<()> {

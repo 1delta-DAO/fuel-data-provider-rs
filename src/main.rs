@@ -5,7 +5,6 @@ use crate::config::CONFIG;
 use crate::ports::blockchain::{BlockchainDataService, TxSync};
 use crate::ports::db::database_manager::DB_MANAGER;
 use crate::ports::sentio::SubgraphQueryService;
-use crate::ports::tx_monitor_poc::TxMonitorPOC;
 
 mod ports;
 mod domain;
