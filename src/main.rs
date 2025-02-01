@@ -20,15 +20,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         env::set_var("RUST_LOG", "info");
     }
 
-    let service = SubgraphQueryService::new();
-    let logs = service.get_all_logs().await;
+/*    let service = SubgraphQueryService::new();
+    let logs = service.get_logs_by_block_number(13231432).await;
     for log in logs {
         log::info!("LOG - len: {}", log.len());
         for row in log{
             log::info!("ROW: {:?}", row);
 //            BlockchainDataService::get_block_time(row.block_number)
         }
-    }
+    }*/
 
     log::info!("Starting application...");
     log::info!("Config: {}", CONFIG.default.server_port_http);

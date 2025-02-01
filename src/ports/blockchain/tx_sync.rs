@@ -26,6 +26,7 @@ use crate::ports::blockchain::blockchain_data_service::BlockchainDataService;
 use crate::ports::db::database_manager::DB_MANAGER;
 use crate::ports::db::model::prelude::PairSwaps;
 use crate::ports::db::model::unknown_token;
+use crate::ports::sentio::{Pool, SubgraphQueryService};
 use crate::ports::tx_monitor_poc::MiraEvent;
 
 pub struct TxSync;
@@ -57,8 +58,11 @@ impl TxSync{
 
         log::info!("TXS-{}: - Start block time: {:?}",runner_id,start_block_time);
 
+        let subgraph_service = SubgraphQueryService::new();
+
         loop {
             let current_block = provider.latest_block_height().await?;
+            log::info!("TXS-{}: - Current block: {}",runner_id,current_block);
 
             if current_block > start_block {
                 for block_height in start_block..=current_block {
@@ -75,6 +79,55 @@ impl TxSync{
 
                             let mut pair_swaps_vec: Vec<PairSwapsEntity> = Vec::new();
                             let block_time = BlockchainDataService::get_block_time(&provider, &(block_height as u64)).await.unwrap();
+
+
+                            let swaps = subgraph_service.get_logs_by_block_number(block_height).await.unwrap_or_else(|_| Vec::new());;
+
+                            if !swaps.is_empty(){
+                                for swap in swaps {
+                                    //swap.
+                                    //log::info!("Swap: {:?}",swap);
+
+                                    let pool = Pool::from_pool_id(&swap.poolId).unwrap();
+                                    //log::info!("Pool: {:?}",pool);
+                                    let token_base
+                                        = get_mira_token_details_by_asset_id(&provider,&AssetId::from_str(pool.token0_address.as_str()).unwrap()).await.unwrap_or(None);
+                                    if let Some(ref token_base) = token_base{
+                                        let token_quote
+                                            = get_mira_token_details_by_asset_id(&provider,&AssetId::from_str(pool.token1_address.as_str()).unwrap()).await.unwrap_or(None);
+
+                                        if let Some(ref token_quote) = token_quote {
+                                            let token_pair = find_or_create_pair(
+                                                token_base,token_quote).await.unwrap();
+                                            let mira_pool = find_or_create_mira_pool(
+                                                token_pair.id,token_base, token_quote).await;
+
+                                            let pair_swap = PairSwapsEntity{
+                                                id: Uuid::new_v4(),
+                                                block_number: block_height.to_string(),
+                                                block_time: Some(block_time),
+                                                tx_id: swap.transaction_hash,
+                                                utxo_id: "".to_string(),
+                                                pair_id: token_pair.id,
+                                                base_amount: Decimal::from(swap.token0In.parse::<u32>().unwrap()),
+                                                quote_amount: Decimal::from(swap.token1Out.parse::<u32>().unwrap()),
+                                                created_at: Utc::now(),
+                                                updated_at: Utc::now(),
+                                            };
+                                            pair_swaps_vec.push(pair_swap);
+
+                                        }
+                                    }
+                                }
+                                log::info!("TXS-{}: - Block {} - PairSwaps: {}",runner_id,block_height,pair_swaps_vec.len());
+                                let _ = PairSwapsService::create_many_with_sync(pair_swaps_vec, block_height as i32,block_time).await;
+                            }else {
+                                log::info!("TXS-{}: - Block {} - No swaps found - skipped",runner_id,block_height);
+                                continue;
+                            }
+
+                            /*
+
                             for tx in block.transactions {
                                 let txr = provider.get_transaction_by_id(&tx).await?.unwrap();
                                 let transaction = txr.transaction.clone();
@@ -174,6 +227,8 @@ impl TxSync{
                             }
                             log::info!("TXS-{}: - Block {} - PairSwaps: {}",runner_id,block_height,pair_swaps_vec.len());
                             let _ = PairSwapsService::create_many_with_sync(pair_swaps_vec, block_height as i32,block_time).await;
+
+                             */
                         }
                     }
                     else{
