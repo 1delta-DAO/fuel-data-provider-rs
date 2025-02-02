@@ -3,44 +3,23 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct SwapEvent {
     timestamp: String,
-    token0In: String,
-    token0Out: String,
-    token1In: String,
-    token1Out: String,
+    #[serde(rename = "token0In")]
+    pub token_0in: String,
+    #[serde(rename = "token0Out")]
+    pub token_0out: String,
+    #[serde(rename = "token1In")]
+    pub token_1in: String,
+    #[serde(rename = "token1Out")]
+    pub token_1out: String,
     dex: String,
-    poolId: String,
-    recipient: String,
-    address: String,
-    block_number: u64,
+    #[serde(rename = "poolId")]
+    pub pool_id: String,
+    pub recipient: String,
+    pub address: String,
+    pub block_number: u64,
     chain: String,
     contract: String,
-    transaction_hash: String,
-}
-
-impl SwapEvent {
-    pub fn transaction_hash(&self) -> &str {
-        &self.transaction_hash
-    }
-
-    pub fn token0In(&self) -> &str {
-        &self.token0In
-    }
-
-    pub fn token1In(&self) -> &str {
-        &self.token1In
-    }
-
-    pub fn token0Out(&self) -> &str {
-        &self.token0Out
-    }
-
-    pub fn token1Out(&self) -> &str {
-        &self.token1Out
-    }
-
-    pub fn poolId(&self) -> &str {
-        &self.poolId
-    }
+    pub transaction_hash: String,
 }
 
 #[derive(Debug, Clone)]
@@ -71,16 +50,19 @@ impl Pool {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct SyncSqlResult {
-    pub rows: Vec<SwapEvent>,
+    pub rows: Option<Vec<SwapEvent>>,
 }
+
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct SyncSqlResponse {
-    pub runtimeCost: String,
+    #[serde(rename = "runtimeCost")]
+    pub runtime_cost: String,
     pub result: SyncSqlResult,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ApiResponse {
-    pub syncSqlResponse: SyncSqlResponse,
+    #[serde(rename = "syncSqlResponse")]
+    pub sync_sql_response: SyncSqlResponse,
 }

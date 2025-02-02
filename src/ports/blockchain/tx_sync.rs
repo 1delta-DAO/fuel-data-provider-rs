@@ -11,6 +11,7 @@ use fuels::core::codec::{ABIDecoder, DecoderConfig};
 use fuels::types::coin_type_id::CoinTypeId::UtxoId;
 use fuels::types::output::Output;
 use fuels::types::param_types::ParamType;
+use log::error;
 use num_traits::AsPrimitive;
 use sea_orm::DbErr;
 use sea_orm::prelude::Decimal;
@@ -47,16 +48,19 @@ impl TxSync{
         let mut wallet = WalletUnlocked::new_random(None);
         wallet.set_provider(provider.clone());
 
-        let mut start_block:u32 = provider.latest_block_height().await?; // get_start_block_number().await;
+        //let mut start_block:u32 = provider.latest_block_height().await?; // get_start_block_number().await;
+        let mut start_block:u32 = get_start_block_number().await;
         log::info!(" TXS-{}: Starting from block: {}",runner_id,start_block);
         let start_block_time = get_block_time_by_block_height(&provider, start_block).await;
 
         log::info!("TXS-{}: - Start block time: {:?}",runner_id,start_block_time);
 
-        let subgraph_service = SubgraphQueryService::new();
-
         loop {
             let current_block = provider.latest_block_height().await?;
+
+            let subgraph_service = SubgraphQueryService::new();
+            let _ = subgraph_service.initialize_cache(start_block,current_block).await;
+
             log::info!("TXS-{}: - Current block: {}",runner_id,current_block);
 
             if current_block > start_block {
@@ -83,7 +87,7 @@ impl TxSync{
                                     //swap.
                                     //log::info!("Swap: {:?}",swap);
 
-                                    let pool = Pool::from_pool_id(&swap.poolId().to_string()).unwrap();
+                                    let pool = Pool::from_pool_id(&swap.pool_id).unwrap();
                                     //log::info!("Pool: {:?}",pool);
                                     let token_base
                                         = get_mira_token_details_by_asset_id(&provider,&AssetId::from_str(pool.token0_address.as_str()).unwrap()).await.unwrap_or(None);
@@ -101,11 +105,11 @@ impl TxSync{
                                                 id: Uuid::new_v4(),
                                                 block_number: block_height.to_string(),
                                                 block_time: Some(block_time),
-                                                tx_id: swap.transaction_hash().to_string(),
+                                                tx_id: swap.transaction_hash,
                                                 utxo_id: "".to_string(),
                                                 pair_id: token_pair.id,
-                                                base_amount: Decimal::from(swap.token0In().parse::<u32>().unwrap()),
-                                                quote_amount: Decimal::from(swap.token1Out().parse::<u32>().unwrap()),
+                                                base_amount: Decimal::from(swap.token_0in.parse::<u32>().unwrap()),
+                                                quote_amount: Decimal::from(swap.token_1out.parse::<u32>().unwrap()),
                                                 created_at: Utc::now(),
                                                 updated_at: Utc::now(),
                                             };
