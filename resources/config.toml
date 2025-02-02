@@ -1,8 +1,8 @@
 [default]
 server_port_http=8080
 data_refresh_interval=300 # seconds
-rpc_url="https://autumn-magical-glade.fuel-mainnet.quiknode.pro/v1/graphql"
-#https://mainnet.fuel.network
+#rpc_url="https://autumn-magical-glade.fuel-mainnet.quiknode.pro/v1/graphql"
+rpc_url="https://mainnet.fuel.network"
 db_url="localhost:5432/fuel_data"
 db_username="admin"
 db_password="admin"

@@ -4,7 +4,7 @@ use num_traits::AsPrimitive;
 use reqwest::Client;
 use serde_json::json;
 use crate::config::CONFIG;
-use crate::ports::sentio::{ApiResponse, Pool, SwapData};
+use crate::ports::sentio::{ApiResponse, Pool, SwapEvent};
 
 const BATCH_SIZE: usize = 10000;
 
@@ -12,7 +12,7 @@ pub struct SubgraphQueryService {
     client: Client,
     endpoint: String,
     api_key: String,
-    cache: Arc<Mutex<HashMap<String, SwapData>>>,
+    cache: Arc<Mutex<HashMap<String, SwapEvent>>>,
 }
 
 impl SubgraphQueryService {
@@ -25,29 +25,42 @@ impl SubgraphQueryService {
         }
     }
 
-    pub async fn get_logs_by_block_number(&self, block_number: u32) -> Result<Vec<SwapData>, Box<dyn std::error::Error>> {
+    pub async fn get_logs_by_block_number(&self, block_number: u32) -> Result<Vec<SwapEvent>, Box<dyn std::error::Error>> {
 
-
-        let raw_data = format!(r#"{{ "block_number_start": "{}","block_number_end":"{}" }}"#,
-                               block_number.to_string(),
-                        block_number.to_string());
-
-        let response = self
-            .client
+        /** 
+         * Enure that > 0 blocks are fetched, single block based fetching makes no sense as
+         * Subgraphs already include filtered data and therefore rarely return 
+         * excessive amounts of data if the range is narrow enough
+         * Also, the fetcher should be using general intervals instead of single block bases, this is jsut a template
+         */
+        let request_body = serde_json::json!({
+            "block_number_start": (block_number - 100).to_string(),
+            "block_number_end": block_number.to_string()
+        });
+    
+        let response = self.client
             .post(&self.endpoint)
             .header("Content-Type", "application/json")
             .header("api-key", &self.api_key)
-            .body(raw_data)
+            .json(&request_body)
             .send()
             .await?;
+    
+        let response_text = response.text().await?;
+        log::info!("response_text: `{:?}`",response_text);
+        let parsed_response: ApiResponse = serde_json::from_str(&response_text)?;
+    
+    
 
-        if !response.status().is_success() {
-            log::error!("API Error: {:?}", response.status());
-            return Err(Box::from("No API in data available"));
-        }
+        // if !response.status().is_success() {
+        //     log::error!("API Error: {:?}", response.status());
+        //     return Err(Box::from("No API in data available"));
+        // }
 
-        let parsed_response = response.json::<ApiResponse>().await?;
-        let rows = parsed_response.sync_sql_response.result.rows;
+        let rows = parsed_response.syncSqlResponse.result.rows;
+
+        /** This one logs the data */
+        log::info!("subgraph data rows: {:?}",rows);
 
         Ok(rows)
 
@@ -56,7 +69,7 @@ impl SubgraphQueryService {
     async fn get_log_by_transaction_hash(
         &self,
         transaction_hash: &str,
-    ) -> Result<Option<SwapData>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<SwapEvent>, Box<dyn std::error::Error>> {
         {
             let cache = self.cache.lock().unwrap();
 
@@ -73,7 +86,7 @@ impl SubgraphQueryService {
         Ok(cache.get(transaction_hash).cloned())
     }
 
-    pub async fn get_all_logs(&self) -> Result<Vec<SwapData>, Box<dyn std::error::Error>> {
+    pub async fn get_all_logs(&self) -> Result<Vec<SwapEvent>, Box<dyn std::error::Error>> {
         {
             let cache = self.cache.lock().unwrap();
             if !cache.is_empty() {
@@ -120,7 +133,7 @@ impl SubgraphQueryService {
 
             let parsed_response = response.json::<ApiResponse>().await?;
             log::info!("Parsed response: {:?}", parsed_response);
-            let rows = parsed_response.sync_sql_response.result.rows;
+            let rows = parsed_response.syncSqlResponse.result.rows;
             last_batch_size = rows.len();
 
             if rows.is_empty() {
@@ -132,10 +145,10 @@ impl SubgraphQueryService {
             let initial_size = cache.len();
 
             for row in rows {
-                if cache.contains_key(&row.transaction_hash) {
+                if cache.contains_key(row.transaction_hash()) {
                     //log::warn!("Record duplicated: {:?}", row);
                 }
-                cache.insert(row.transaction_hash.clone(), row);
+                cache.insert(row.transaction_hash().to_string(), row);
             }
 
             log::info!(

@@ -47,7 +47,7 @@ impl TxSync{
         let mut wallet = WalletUnlocked::new_random(None);
         wallet.set_provider(provider.clone());
 
-        let mut start_block:u32 = get_start_block_number().await;
+        let mut start_block:u32 = provider.latest_block_height().await?; // get_start_block_number().await;
         log::info!(" TXS-{}: Starting from block: {}",runner_id,start_block);
         let start_block_time = get_block_time_by_block_height(&provider, start_block).await;
 
@@ -83,7 +83,7 @@ impl TxSync{
                                     //swap.
                                     //log::info!("Swap: {:?}",swap);
 
-                                    let pool = Pool::from_pool_id(&swap.pool_id).unwrap();
+                                    let pool = Pool::from_pool_id(&swap.poolId().to_string()).unwrap();
                                     //log::info!("Pool: {:?}",pool);
                                     let token_base
                                         = get_mira_token_details_by_asset_id(&provider,&AssetId::from_str(pool.token0_address.as_str()).unwrap()).await.unwrap_or(None);
@@ -101,11 +101,11 @@ impl TxSync{
                                                 id: Uuid::new_v4(),
                                                 block_number: block_height.to_string(),
                                                 block_time: Some(block_time),
-                                                tx_id: swap.transaction_hash,
+                                                tx_id: swap.transaction_hash().to_string(),
                                                 utxo_id: "".to_string(),
                                                 pair_id: token_pair.id,
-                                                base_amount: Decimal::from(swap.token0In.parse::<u32>().unwrap()),
-                                                quote_amount: Decimal::from(swap.token1Out.parse::<u32>().unwrap()),
+                                                base_amount: Decimal::from(swap.token0In().parse::<u32>().unwrap()),
+                                                quote_amount: Decimal::from(swap.token1Out().parse::<u32>().unwrap()),
                                                 created_at: Utc::now(),
                                                 updated_at: Utc::now(),
                                             };
