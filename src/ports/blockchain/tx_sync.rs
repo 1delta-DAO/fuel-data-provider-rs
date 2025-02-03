@@ -80,7 +80,9 @@ impl TxSync{
                             let block_time = BlockchainDataService::get_block_time(&provider, &(block_height as u64)).await.unwrap();
 
 
-                            let swaps = subgraph_service.get_logs_by_block_number(block_height).await.unwrap_or_else(|_| Vec::new());;
+                            //let swaps = subgraph_service.get_logs_by_block_number(block_height).await.unwrap_or_else(|_| Vec::new());;
+
+                            let swaps = subgraph_service.get_logs_by_block_number_from_cache(block_height);
 
                             if !swaps.is_empty(){
                                 for swap in swaps {

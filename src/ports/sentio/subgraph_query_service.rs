@@ -6,7 +6,7 @@ use serde_json::json;
 use crate::config::CONFIG;
 use crate::ports::sentio::{ApiResponse, Pool, SwapEvent, SyncSqlResult};
 
-const BATCH_SIZE: usize = 40;
+const BATCH_SIZE: usize = 100;
 
 pub struct SubgraphQueryService {
     client: Client,
@@ -60,14 +60,14 @@ impl SubgraphQueryService {
                 for row in rows {
                     cache.insert(row.transaction_hash.clone(), row);
                 }
-
+                log::info!("Cache size {}", cache.len());
                 if batch_size < BATCH_SIZE {
                     break;
                 }
 
-                offset += BATCH_SIZE; // Przesuwamy offset o wielkość batcha
+                offset += BATCH_SIZE;
             } else {
-                break; // API zwróciło pustą odpowiedź → zakończ pobieranie
+                break;
             }
         }
 
@@ -77,6 +77,18 @@ impl SubgraphQueryService {
     pub fn get_by_transaction_hash(&self, tx_hash: &str) -> Option<SwapEvent> {
         let cache = self.cache.lock().unwrap();
         cache.get(tx_hash).cloned()
+    }
+
+    pub fn get_logs_by_block_number_from_cache(&self, block_number: u32) -> Vec<SwapEvent> {
+        let cache = self.cache.lock().unwrap();
+        let results: Vec<SwapEvent> = cache
+            .values()
+            .filter(|event| event.block_number == block_number as u64) // 🔹 Filtrujemy po `block_number`
+            .cloned()
+            .collect();
+
+        log::info!("Znaleziono {} wyników dla block_number {}", results.len(), block_number);
+        results
     }
 
     pub async fn get_logs_by_block_number(&self, block_number: u32) -> Result<Vec<SwapEvent>, Box<dyn std::error::Error>> {
