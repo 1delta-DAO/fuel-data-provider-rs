@@ -21,6 +21,7 @@ pub struct DefaultConfig {
     pub calculation_window: u16,
     pub cdi_fuel_token_gateway: String,
     pub cdi_fuel_token_gateway_dependency: String,
+    pub cdi_mira_token_gateway: String,
     pub cdi_mira_amm: String,
     pub mira_swap_event: String,
     pub mira_create_pool: String,
@@ -49,6 +50,7 @@ pub enum EnvVar {
     CalculationWindow,
     CdiFuelTokenGateway,
     CdiFuelTokenGatewayDependency,
+    CdiMiraTokenGateway,
     CdiMiraAmm,
     MiraSwapEvent,
     MiraCreatePool,
@@ -75,6 +77,7 @@ impl fmt::Display for EnvVar {
             EnvVar::CalculationWindow => "CALCULATION_WINDOW",
             EnvVar::CdiFuelTokenGateway => "CDI_FUEL_TOKEN_GATEWAY",
             EnvVar::CdiFuelTokenGatewayDependency => "CDI_FUEL_TOKEN_GATEWAY_DEPENDENCY",
+            EnvVar::CdiMiraTokenGateway => "CDI_MIRA_TOKEN_GATEWAY",
             EnvVar::CdiMiraAmm => "CDI_MIRA_AMM",
             EnvVar::MiraSwapEvent => "MIRA_SWAP_EVENT",
             EnvVar::MiraCreatePool => "MIRA_CREATE_POOL",
@@ -139,6 +142,7 @@ pub fn load_config_from_env_or_file() -> Result<AppConfig, Box<dyn Error>> {
         EnvVar::CalculationWindow.get_value(config.default.calculation_window);
     config.default.cdi_fuel_token_gateway = EnvVar::CdiFuelTokenGateway.get_value(config.default.cdi_fuel_token_gateway.clone());
     config.default.cdi_fuel_token_gateway_dependency = EnvVar::CdiFuelTokenGatewayDependency.get_value(config.default.cdi_fuel_token_gateway_dependency.clone());
+    config.default.cdi_mira_token_gateway = EnvVar::CdiMiraTokenGateway.get_value(config.default.cdi_mira_token_gateway.clone());
     config.default.cdi_mira_amm = EnvVar::CdiMiraAmm.get_value(config.default.cdi_mira_amm.clone());
     config.default.mira_swap_event = EnvVar::MiraSwapEvent.get_value(config.default.mira_swap_event.clone());
     config.default.mira_create_pool = EnvVar::MiraCreatePool.get_value(config.default.mira_create_pool.clone());
