@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::net::ToSocketAddrs;
 use std::str::FromStr;
 use fuels::prelude::*;
@@ -64,6 +64,9 @@ impl TxSync{
             log::info!("TXS-{}: - Current block: {}",runner_id,current_block);
 
             if current_block > start_block {
+
+                let mut updated_pairs: HashMap<Uuid, TokenPairsEntity> = HashMap::new();
+
                 for block_height in start_block..=current_block {
                     log::info!("TXS-{}: - Block {} - Start",runner_id,block_height);
 
@@ -100,8 +103,7 @@ impl TxSync{
                                         if let Some(ref token_quote) = token_quote {
                                             let token_pair = find_or_create_pair(
                                                 token_base,token_quote).await.unwrap();
-                                            let mira_pool = find_or_create_mira_pool(
-                                                token_pair.id,token_base, token_quote).await;
+                                            updated_pairs.insert(token_pair.id,token_pair.clone());
 
                                             let pair_swap = PairSwapsEntity{
                                                 id: Uuid::new_v4(),
@@ -110,8 +112,8 @@ impl TxSync{
                                                 tx_id: swap.transaction_hash,
                                                 utxo_id: "".to_string(),
                                                 pair_id: token_pair.id,
-                                                base_amount: Decimal::from(swap.token_0in.parse::<u32>().unwrap()),
-                                                quote_amount: Decimal::from(swap.token_1out.parse::<u32>().unwrap()),
+                                                base_amount: Decimal::from(swap.token_0in.parse::<u64>().unwrap()),
+                                                quote_amount: Decimal::from(swap.token_1out.parse::<u64>().unwrap()),
                                                 created_at: Utc::now(),
                                                 updated_at: Utc::now(),
                                             };
@@ -237,6 +239,12 @@ impl TxSync{
                     }
 
                 }
+
+                if updated_pairs.len() > 0{
+                    for (id,pair) in &updated_pairs{
+                        find_or_create_mira_pool(pair.id).await;
+                    }
+                }
             }
             //break;
             tokio::time::sleep(Duration::from_secs(1)).await;
@@ -248,7 +256,7 @@ impl TxSync{
 async fn find_or_create_pair(base_token: &TokenEntity, quote_token: &TokenEntity) -> Option<TokenPairsEntity> {
     match TokenPairsService::find_or_create_pair(&base_token, &quote_token).await{
         Ok(token_pair) =>{
-            let _ = find_or_create_mira_pool(token_pair.id, &base_token, &quote_token).await;
+            //let _ = find_or_create_mira_pool(token_pair.id).await;
             Some(token_pair)
         }
         Err(err)=>{
@@ -259,9 +267,9 @@ async fn find_or_create_pair(base_token: &TokenEntity, quote_token: &TokenEntity
 
 }
 
-async fn find_or_create_mira_pool(pair_id: Uuid,base_token: &TokenEntity, quote_token: &TokenEntity) -> Option<MiraPoolsEntity>{
+async fn find_or_create_mira_pool(pair_id: Uuid) -> Option<MiraPoolsEntity>{
 
-    match MiraPoolsService::find_or_create(pair_id, base_token,quote_token).await{
+    match MiraPoolsService::find_or_create(pair_id).await{
         Ok(mira_pool)=>{
             //refresh
             Some(refresh_mira_pool(mira_pool).await)

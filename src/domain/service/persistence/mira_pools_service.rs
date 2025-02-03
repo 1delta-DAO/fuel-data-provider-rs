@@ -38,9 +38,12 @@ impl MiraPoolsService {
     }
 
     /// Finds an existing pool by `pair_id` or creates a new one
-    pub async fn find_or_create(pair_id: Uuid, quote_token: &TokenEntity, base_token: &TokenEntity) -> Result<MiraPoolsEntity, DbErr> {
+    pub async fn find_or_create(pair_id: Uuid) -> Result<MiraPoolsEntity, DbErr> {
         match Self::find_by_pair_id(pair_id).await? {
-            Some(existing_pool) => Ok(existing_pool),
+            Some(existing_pool) => {
+                let updated_pool = Self::update(existing_pool).await?;
+                Ok(updated_pool)
+            },
             None => {
                 let mira_pool = MiraPoolsEntity{
                     id: Uuid::new_v4(),

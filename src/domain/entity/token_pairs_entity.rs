@@ -2,6 +2,7 @@ use crate::domain::entity::entity::Entity;
 use crate::ports::db::model::token_pairs::Model;
 use uuid::Uuid;
 
+#[derive(Debug, Clone)]
 pub struct TokenPairsEntity {
     pub id: Uuid,
     pub base_token_details_id: Uuid,
