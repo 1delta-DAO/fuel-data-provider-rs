@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use sea_orm_migration::prelude::*;
+use uuid::Uuid;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -45,6 +46,34 @@ impl MigrationTrait for Migration {
                     .to_owned(),
             )
             .await?;
+
+        //Seed data
+
+        let token_id: Uuid = Uuid::new_v4();
+        manager
+            .get_connection()
+            .execute_unprepared(&format!(
+                "INSERT INTO \"token\" (id, address, symbol, name, decimals) VALUES ('{}', '{}','{}','{}','{}');",
+                token_id,
+                "f8f8b6283d7fa5b672b530cbb84fcccb4ff8dc40f8176ef4544ddb1f1952ad07",
+                "ETH",
+                "Ethereum",
+                9,
+            ))
+            .await?;
+        let token_id: Uuid = Uuid::new_v4();
+        manager
+            .get_connection()
+            .execute_unprepared(&format!(
+                "INSERT INTO \"token\" (id, address, symbol, name, decimals) VALUES ('{}', '{}','{}','{}','{}');",
+                token_id,
+                "33a6d90877f12c7954cca6d65587c25e9214c7bed2231c188981c7114c1bdb78",
+                "USDF",
+                "USDF",
+                9,
+            ))
+            .await?;
+
 
         // Create table `token`
         manager

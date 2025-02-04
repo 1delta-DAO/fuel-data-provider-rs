@@ -1,20 +1,25 @@
 [default]
 server_port_http=8080
 data_refresh_interval=300 # seconds
-rpc_url="https://autumn-magical-glade.fuel-mainnet.quiknode.pro/v1/graphql"
-#https://mainnet.fuel.network
+#rpc_url="https://autumn-magical-glade.fuel-mainnet.quiknode.pro/v1/graphql"
+rpc_url="https://mainnet.fuel.network"
 db_url="localhost:5432/fuel_data"
 db_username="admin"
 db_password="admin"
 db_min_connections=4
 db_max_connections=8
 db_sql_logging=false
-tx_log_start_block_number=12590022 #11500000
-calculation_window=1000 #h
+tx_log_start_block_number=13480000 #11500000
+calculation_window=24 #h
+#0x81d5964bfbb24fd994591cc7d0a4137458d746ac0eb7ececb9a9cf2ae966d942
+#0x4ea6ccef1215d9479f1024dff70fc055ca538215d2c8c348beddffd54583d0e8
 cdi_fuel_token_gateway = "0x4ea6ccef1215d9479f1024dff70fc055ca538215d2c8c348beddffd54583d0e8"
 cdi_fuel_token_gateway_dependency = "0x0ceafc5ef55c66912e855917782a3804dc489fb9e27edfd3621ea47d2a281156"
+cdi_mira_token_gateway = "0x81d5964bfbb24fd994591cc7d0a4137458d746ac0eb7ececb9a9cf2ae966d942"
 cdi_mira_amm = "0x2e40f2b244b98ed6b8204b3de0156c6961f98525c8162f80162fcf53eebd90e7"
 mira_swap_event="7938487056892321597"
 mira_create_pool="12224862438738316526"
 mira_total_supply="17462098202904023478"
 mira_pool_max_age=5 #minutes
+sentio_url="https://endpoint.sentio.xyz/1delta/fuel-subgraph/swaps_filtered"
+sentio_api_key="mHWELZ01Oo3BRfGb0WrhFvryge78baQVT"

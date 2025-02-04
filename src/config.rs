@@ -21,11 +21,14 @@ pub struct DefaultConfig {
     pub calculation_window: u16,
     pub cdi_fuel_token_gateway: String,
     pub cdi_fuel_token_gateway_dependency: String,
+    pub cdi_mira_token_gateway: String,
     pub cdi_mira_amm: String,
     pub mira_swap_event: String,
     pub mira_create_pool: String,
     pub mira_total_supply: String,
     pub mira_pool_max_age: u8,
+    pub sentio_url: String,
+    pub sentio_api_key: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -47,11 +50,14 @@ pub enum EnvVar {
     CalculationWindow,
     CdiFuelTokenGateway,
     CdiFuelTokenGatewayDependency,
+    CdiMiraTokenGateway,
     CdiMiraAmm,
     MiraSwapEvent,
     MiraCreatePool,
     MiraTotalSupply,
     MiraPoolMaxAge,
+    SentioUrl,
+    SentioApiKey,
 }
 
 // Implement Display for EnvVar to convert to string
@@ -71,11 +77,14 @@ impl fmt::Display for EnvVar {
             EnvVar::CalculationWindow => "CALCULATION_WINDOW",
             EnvVar::CdiFuelTokenGateway => "CDI_FUEL_TOKEN_GATEWAY",
             EnvVar::CdiFuelTokenGatewayDependency => "CDI_FUEL_TOKEN_GATEWAY_DEPENDENCY",
+            EnvVar::CdiMiraTokenGateway => "CDI_MIRA_TOKEN_GATEWAY",
             EnvVar::CdiMiraAmm => "CDI_MIRA_AMM",
             EnvVar::MiraSwapEvent => "MIRA_SWAP_EVENT",
             EnvVar::MiraCreatePool => "MIRA_CREATE_POOL",
             EnvVar::MiraTotalSupply => "MIRA_TOTAL_SUPPLY",
             EnvVar::MiraPoolMaxAge => "MIRA_POOL_MAX_AGE",
+            EnvVar::SentioUrl => "SENTIO_URL",
+            EnvVar::SentioApiKey => "SENTIO_API_KEY",
         };
         write!(f, "{}", name)
     }
@@ -133,10 +142,13 @@ pub fn load_config_from_env_or_file() -> Result<AppConfig, Box<dyn Error>> {
         EnvVar::CalculationWindow.get_value(config.default.calculation_window);
     config.default.cdi_fuel_token_gateway = EnvVar::CdiFuelTokenGateway.get_value(config.default.cdi_fuel_token_gateway.clone());
     config.default.cdi_fuel_token_gateway_dependency = EnvVar::CdiFuelTokenGatewayDependency.get_value(config.default.cdi_fuel_token_gateway_dependency.clone());
+    config.default.cdi_mira_token_gateway = EnvVar::CdiMiraTokenGateway.get_value(config.default.cdi_mira_token_gateway.clone());
     config.default.cdi_mira_amm = EnvVar::CdiMiraAmm.get_value(config.default.cdi_mira_amm.clone());
     config.default.mira_swap_event = EnvVar::MiraSwapEvent.get_value(config.default.mira_swap_event.clone());
     config.default.mira_create_pool = EnvVar::MiraCreatePool.get_value(config.default.mira_create_pool.clone());
     config.default.mira_total_supply = EnvVar::MiraTotalSupply.get_value(config.default.mira_total_supply.clone());
     config.default.mira_pool_max_age = EnvVar::MiraPoolMaxAge.get_value(config.default.mira_pool_max_age);
+    config.default.sentio_url = EnvVar::SentioUrl.get_value(config.default.sentio_url.clone());
+    config.default.sentio_api_key = EnvVar::SentioApiKey.get_value(config.default.sentio_api_key.clone());
     Ok(config)
 }

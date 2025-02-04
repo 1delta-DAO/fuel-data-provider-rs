@@ -1,4 +1,3 @@
-use crate::ports::db::model::token_pairs::Model;
 use crate::ports::db::repository::{CrudRepository, TokenPairsRepository};
 use sea_orm::{DbErr, IntoActiveModel};
 use uuid::Uuid;

@@ -4,7 +4,6 @@ use std::env;
 use crate::config::CONFIG;
 use crate::ports::blockchain::TxSync;
 use crate::ports::db::database_manager::DB_MANAGER;
-use crate::ports::tx_monitor_poc::TxMonitorPOC;
 
 mod ports;
 mod domain;
@@ -18,6 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if env::var("RUST_LOG").is_err() {
         env::set_var("RUST_LOG", "info");
     }
+
     log::info!("Starting application...");
     log::info!("Config: {}", CONFIG.default.server_port_http);
     let _ = DB_MANAGER.initialize().await;
@@ -29,6 +29,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Err(e) => eprintln!("Error occurred: {}", e),
         }
     });
+
+    /*
 
     let tx_sync_handle_two = tokio::spawn(async{
         tokio::time::sleep(std::time::Duration::from_secs(10)).await;
@@ -66,6 +68,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    */
+
 /*    let tx_handle = tokio::spawn(async {
         log::info!("Starting TX monitoring service ...");
         match TxMonitorPOC::monitor_transactions().await {
@@ -74,13 +78,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });*/
 
-    if let Err(e) = tokio::try_join!(
-        tx_sync_handle_one
-/*        ,
+    /*        ,
         tx_sync_handle_two,
         tx_sync_handle_three,
         tx_sync_handle_four,
         tx_sync_handle_five*/
+
+
+    if let Err(e) = tokio::try_join!(
+        tx_sync_handle_one
         ) {
         log::error!("Error occurred while joining tasks: {:?}", e);
     }

@@ -1,5 +1,5 @@
 use crate::domain::entity::entity::Entity;
-use crate::ports::db::model::token::{self, Model};
+use crate::ports::db::model::token::{self};
 use crate::ports::db::repository::{CrudRepository, TokenRepository};
 use sea_orm::{DbErr, IntoActiveModel};
 use crate::domain::entity::TokenEntity;
