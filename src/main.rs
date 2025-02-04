@@ -2,9 +2,8 @@
 
 use std::env;
 use crate::config::CONFIG;
-use crate::ports::blockchain::{BlockchainDataService, TxSync};
+use crate::ports::blockchain::TxSync;
 use crate::ports::db::database_manager::DB_MANAGER;
-use crate::ports::sentio::SubgraphQueryService;
 
 mod ports;
 mod domain;
@@ -18,16 +17,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if env::var("RUST_LOG").is_err() {
         env::set_var("RUST_LOG", "info");
     }
-
-/*    let service = SubgraphQueryService::new();
-    let logs = service.get_logs_by_block_number(13231432).await;
-    for log in logs {
-        log::info!("LOG - len: {}", log.len());
-        for row in log{
-            log::info!("ROW: {:?}", row);
-//            BlockchainDataService::get_block_time(row.block_number)
-        }
-    }*/
 
     log::info!("Starting application...");
     log::info!("Config: {}", CONFIG.default.server_port_http);

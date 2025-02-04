@@ -28,6 +28,7 @@ impl SubgraphQueryService {
     pub async fn initialize_cache(&self, block_start: u32, block_end: u32) -> Result<(), Box<dyn std::error::Error>> {
         log::info!("Initializing cache: {}-{}",block_start,block_end);
         let mut offset = 0;
+        let mut last_block: String = "".to_string();
 
         loop {
             let request_body = json!({
@@ -52,13 +53,14 @@ impl SubgraphQueryService {
                     log::error!("JSON conversion exception: {:?}", e);
                     e
                 })?;
-            log::info!("Fetched rows: {}", parsed_response.sync_sql_response.result.rows.as_ref().map_or(0, |r| r.len()));
+            //log::info!("Fetched rows: {}", parsed_response.sync_sql_response.result.rows.as_ref().map_or(0, |r| r.len()));
 
             let mut cache = self.cache.lock().unwrap();
             if let Some(rows) = parsed_response.sync_sql_response.result.rows {
                 let batch_size = rows.len();
                 for row in rows {
-                    cache.insert(row.transaction_hash.clone(), row);
+                    cache.insert(row.transaction_hash.clone(), row.clone());
+                    last_block = row.clone().block_number.to_string();
                 }
                 log::info!("Cache size {}", cache.len());
                 if batch_size < BATCH_SIZE {
@@ -70,7 +72,7 @@ impl SubgraphQueryService {
                 break;
             }
         }
-
+        log::info!("Cache updated to block: {}", last_block);
         Ok(())
     }
 
@@ -87,7 +89,7 @@ impl SubgraphQueryService {
             .cloned()
             .collect();
 
-        log::info!("Znaleziono {} wyników dla block_number {}", results.len(), block_number);
+        //log::info!("{} results found for block_number {}", results.len(), block_number);
         results
     }
 

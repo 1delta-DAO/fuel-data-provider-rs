@@ -1,7 +1,6 @@
 use crate::domain::entity::entity::Entity;
 use crate::ports::db::model::sync_status::Model;
 use chrono::{DateTime, Utc};
-use sea_orm::prelude::DateTimeWithTimeZone;
 use uuid::Uuid;
 
 pub struct SyncStatusEntity {
