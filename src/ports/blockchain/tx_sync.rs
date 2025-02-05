@@ -17,10 +17,13 @@ use sea_orm::DbErr;
 use sea_orm::prelude::Decimal;
 use serde::Deserialize;
 use uuid::Uuid;
+use thiserror::Error;
+use std::result::Result;
 use crate::config::CONFIG;
 use crate::domain::entity::{TokenEntity, TokenPairsEntity, UnknownTokenEntity};
 use crate::domain::entity::mira_pools_entity::MiraPoolsEntity;
 use crate::domain::entity::pair_swaps_entity::PairSwapsEntity;
+use crate::domain::service::exception::DataException;
 use crate::domain::service::persistence::{PairSwapsService, SyncStatusService, TokenPairsService, TokenService, UnknownTokenService};
 use crate::domain::service::persistence::mira_pools_service::MiraPoolsService;
 use crate::ports::blockchain::blockchain_data_service::BlockchainDataService;
@@ -28,6 +31,18 @@ use crate::ports::db::database_manager::DB_MANAGER;
 use crate::ports::db::model::prelude::PairSwaps;
 use crate::ports::db::model::unknown_token;
 use crate::ports::sentio::{Pool, SubgraphQueryService};
+
+#[derive(Error,Debug)]
+pub enum TxSyncError {
+    #[error("Provider error: {0}")]
+    ProviderError(#[from] fuels::prelude::Error),
+    #[error("Database error: {0}")]
+    DatabaseError(#[from] DbErr),
+    #[error("Fuel data exception: {0}")]
+    DataException(#[from] DataException),
+    #[error("Unknown error: {0}")]
+    Unknown(#[from] String),
+}
 
 pub struct TxSync;
 
@@ -43,12 +58,11 @@ abigen!(
 );
 
 impl TxSync{
-    pub async fn synchronize_transactions(runner_id: u8) -> Result<()> {
+    pub async fn synchronize_transactions(runner_id: u8) -> Result<(),TxSyncError> {
         let provider = Provider::connect(CONFIG.default.rpc_url.as_str()).await?;
         let mut wallet = WalletUnlocked::new_random(None);
         wallet.set_provider(provider.clone());
 
-        //let mut start_block:u32 = provider.latest_block_height().await?; // get_start_block_number().await;
         let mut start_block:u32 = get_start_block_number().await;
         log::info!(" TXS-{}: Starting from block: {}",runner_id,start_block);
         let start_block_time = get_block_time_by_block_height(&provider, start_block).await;
@@ -60,7 +74,7 @@ impl TxSync{
         loop {
             let current_block = provider.latest_block_height().await?;
 
-            let _ = subgraph_service.initialize_cache(start_block,current_block).await;
+            let _ = subgraph_service.initialize_cache(start_block,current_block).await?;
 
             log::info!("TXS-{}: - Current block: {}",runner_id,current_block);
 
@@ -71,7 +85,7 @@ impl TxSync{
                 for block_height in start_block..=current_block {
                     //log::info!("TXS-{}: - Block {} - Start",runner_id,block_height);
 
-                    if is_block_in_calc_window(&provider, block_height as u64).await {
+                    if is_block_in_calc_window(&provider, block_height as u64).await? {
                         //let block = provider.block_by_height(BlockHeight::from(block_height)).await?;
 
                         let mut pair_swaps_vec: Vec<PairSwapsEntity> = Vec::new();
@@ -81,19 +95,12 @@ impl TxSync{
                             continue;
                         }
 
-                        //if let Some(block) = block {
-
-
-
-
-                            //let swaps = subgraph_service.get_logs_by_block_number(block_height).await.unwrap_or_else(|_| Vec::new());;
-
                             let swaps = subgraph_service.get_logs_by_block_number_from_cache(block_height);
 
                             if !swaps.is_empty(){
 
 
-                                let block_time = BlockchainDataService::get_block_time(&provider, &(block_height as u64)).await.unwrap();
+                                let block_time = BlockchainDataService::get_block_time(&provider, &(block_height as u64)).await?;
 
                                 for swap in swaps {
 
@@ -133,7 +140,6 @@ impl TxSync{
                                 log::info!("TXS-{}: - Block {} - No swaps found - skipped",runner_id,block_height);
                                 continue;
                             }
-                        //}
                     }
                     else{
                         log::info!("TXS-{}: Block {} out of calc window - skipped",runner_id,block_height);
@@ -187,7 +193,7 @@ async fn refresh_mira_pool(mira_pool: MiraPoolsEntity) -> MiraPoolsEntity{
     get_mira_pool_metadata(mira_pool).await
 }
 
-async fn get_block_time_by_block_height(provider: &Provider, block_height: u32) -> fuels::prelude::Result<DateTime<Utc>> {
+async fn get_block_time_by_block_height(provider: &Provider, block_height: u32) -> Result<DateTime<Utc>, TxSyncError> {
     let block = provider.block_by_height(BlockHeight::new(block_height.clone())).await?;
     Ok(block.unwrap().header.time.unwrap())
 }
@@ -207,18 +213,18 @@ async fn get_start_block_number() ->u32 {
     block_number
 }
 
-async fn is_block_in_calc_window(provider: &Provider, block_number: u64) -> bool{
+async fn is_block_in_calc_window(provider: &Provider, block_number: u64) -> Result<bool,TxSyncError>{
     // Fetch the block time
-    let block_time_result = BlockchainDataService::get_block_time(provider, &block_number).await;
+    let block_time = BlockchainDataService::get_block_time(provider, &block_number).await?;
 
-    // Check if block_time was successfully fetched
+/*    // Check if block_time was successfully fetched
     let block_time = match block_time_result {
         Ok(time) => time,
-        Err(_) => {
+        Err(e) => {
             // If fetching block_time fails, assume it's out of range
-            return false;
+            return Err(e.to_string());
         }
-    };
+    };*/
 
     // Get the calculation window in hours from the config
     let window_range_hours = CONFIG.default.calculation_window as i64;
@@ -227,9 +233,9 @@ async fn is_block_in_calc_window(provider: &Provider, block_number: u64) -> bool
     let cutoff_time = Utc::now() - Duration::from_hours(window_range_hours as u64);
 
     // Check if the block_time is within the calculation window
-    block_time >= cutoff_time
+    Ok(block_time >= cutoff_time)
 }
-
+/*
 async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>>{
 
     log::info!("Fetching token details by asset_id: {}",asset_id.to_string());
@@ -310,11 +316,11 @@ async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -
     }
 
 }
-
-async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>>{
+*/
+async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>,TxSyncError>{
 
     log::info!("Fetching mira token details by asset_id: {}",asset_id.to_string());
-    let token = TokenService::find_by_address(&asset_id.to_string()).await.unwrap();
+    let token = TokenService::find_by_address(&asset_id.to_string()).await?;
 
     if token.is_some(){
         log::info!("Token found in DB");
@@ -352,7 +358,7 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
                             updated_at: Utc::now(),
                         };
                         log::info!("Mira - All data ready to create new Token entity: {:?}",token_entity);
-                        Ok(Some(TokenService::create(token_entity).await.unwrap()))
+                        Ok(Some(TokenService::create(token_entity).await?))
                     },
                     None => {
                         log::info!("Mira - No asset found in TG");
@@ -386,7 +392,7 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
                                             updated_at: Utc::now(),
                                         };
                                         log::info!("Fuel Gateway - All data ready to create new Token entity: {:?}",token_entity);
-                                        Ok(Some(TokenService::create(token_entity).await.unwrap()))
+                                        Ok(Some(TokenService::create(token_entity).await?))
                                     },
                                     None => {
                                         log::info!("No token found in fuel gateway");
@@ -394,7 +400,7 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
                                             id: Uuid::new_v4(),
                                             address: asset_id.to_string(),
                                         };
-                                        let _ = UnknownTokenService::create_if_not_exists(unknown_token).await;
+                                        let _ = UnknownTokenService::create_if_not_exists(unknown_token).await?;
                                         Ok(None)
                                     }
                                 }
@@ -405,7 +411,7 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
                                     id: Uuid::new_v4(),
                                     address: asset_id.to_string(),
                                 };
-                                let _ = UnknownTokenService::create_if_not_exists(unknown_token).await;
+                                let _ = UnknownTokenService::create_if_not_exists(unknown_token).await?;
                                 Ok(None)
                             }
                         }
@@ -418,7 +424,7 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
                     id: Uuid::new_v4(),
                     address: asset_id.to_string(),
                 };
-                let _ = UnknownTokenService::create_if_not_exists(unknown_token).await;
+                let _ = UnknownTokenService::create_if_not_exists(unknown_token).await?;
                 Ok(None)
             }
         }

@@ -1,6 +1,7 @@
 #![feature(duration_constructors)]
 
 use std::env;
+use std::time::Duration;
 use crate::config::CONFIG;
 use crate::ports::blockchain::TxSync;
 use crate::ports::db::database_manager::DB_MANAGER;
@@ -24,9 +25,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let tx_sync_handle_one = tokio::spawn(async{
         log::info!("Starting TX Sync service - Runner 1 ...");
-        match TxSync::synchronize_transactions(1).await{
-            Ok(_) => println!("Synchronization finished successfully."),
-            Err(e) => eprintln!("Error occurred: {}", e),
+        //Endless retry
+        loop {
+            match TxSync::synchronize_transactions(1).await {
+                Ok(_) => {
+                    log::info!("Synchronization finished successfully, restarting...");
+                }
+                Err(e) => {
+                    log::error!("Error occurred: {}. Retrying after delay...", e);
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                }
+            }
         }
     });
 

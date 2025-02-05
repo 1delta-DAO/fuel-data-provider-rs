@@ -25,7 +25,7 @@ impl SubgraphQueryService {
         }
     }
 
-    pub async fn initialize_cache(&self, block_start: u32, block_end: u32) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn initialize_cache(&self, block_start: u32, block_end: u32) -> Result<(), String> {
         log::info!("Initializing cache: {}-{}",block_start,block_end);
         let mut offset = 0;
         let mut last_block: String = "".to_string();
@@ -38,21 +38,31 @@ impl SubgraphQueryService {
                 "offset": offset.to_string()
             });
 
-            let response = self.client
+            let response = match self.client
                 .post(&self.endpoint)
                 .header("Content-Type", "application/json")
                 .header("api-key", &self.api_key)
                 .json(&request_body)
                 .send()
-                .await?;
+                .await
+            {
+                Ok(response) => response,
+                Err(e) => {return Err(e.to_string())},
+            };
 
-            let response_text = response.text().await?;
+            let response_text = match response.text().await
+            {
+                Ok(text) => text,
+                Err(e) => {return Err(e.to_string())},
+            };
             //log::info!("Response: {}", response_text);
-            let parsed_response: ApiResponse = serde_json::from_str(&response_text)
-                .map_err(|e| {
+            let parsed_response: ApiResponse = match serde_json::from_str(&response_text) {
+                Ok(parsed) => parsed,
+                Err(e) => {
                     log::error!("JSON conversion exception: {:?}", e);
-                    e
-                })?;
+                    return Err(e.to_string());
+                },
+            };
             //log::info!("Fetched rows: {}", parsed_response.sync_sql_response.result.rows.as_ref().map_or(0, |r| r.len()));
 
             let mut cache = self.cache.lock().unwrap();

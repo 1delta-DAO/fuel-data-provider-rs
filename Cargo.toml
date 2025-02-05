@@ -21,6 +21,7 @@ fuel-tx = "0.59.1"
 uuid = { version = "1.11.0", features = ["v4","serde"] }
 sea-orm = { version = "1.1.2", features = [ "sqlx-postgres", "runtime-tokio-native-tls", "macros","with-chrono" ] }
 strum_macros = "0.26.4"
+thiserror = "1.0.69"
 
 [[bin]]
 name = "fuel_data_provider"
