@@ -1,9 +1,11 @@
 #![feature(duration_constructors)]
 
 use std::env;
+use std::time::Instant;
 use crate::config::CONFIG;
 use crate::ports::blockchain::TxSync;
 use crate::ports::db::database_manager::DB_MANAGER;
+use crate::ports::squid::SquidQueryService;
 
 mod ports;
 mod domain;
@@ -17,6 +19,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if env::var("RUST_LOG").is_err() {
         env::set_var("RUST_LOG", "info");
     }
+
+    let start_time = Instant::now();
+
+    let _ = SquidQueryService::get_logs_by_block_number(14020547).await;
+    let elapsed_time = start_time.elapsed();
+    log::info!("Execution time: {:?}", elapsed_time);
 
     log::info!("Starting application...");
     log::info!("Config: {}", CONFIG.default.server_port_http);

@@ -288,6 +288,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bincode"
+version = "1.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1327,7 +1336,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "885617a606218680114122f4e1107ed5c9424e42dec05de84843e4a3a99e2cd7"
 dependencies = [
  "bitflags 2.6.0",
- "fuel-types 0.59.1",
+ "fuel-types 0.59.2",
  "serde",
  "strum 0.24.1",
 ]
@@ -1500,7 +1509,7 @@ dependencies = [
  "coins-bip39",
  "ecdsa",
  "ed25519-dalek",
- "fuel-types 0.59.1",
+ "fuel-types 0.59.2",
  "k256",
  "lazy_static",
  "p256",
@@ -1516,11 +1525,14 @@ name = "fuel-data-provider-rs"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "bincode",
  "chrono",
  "config",
  "env_logger",
  "fuel-tx 0.59.1",
+ "fuel-types 0.59.2",
  "fuels",
+ "hex",
  "log",
  "num-traits",
  "once_cell",
@@ -1548,9 +1560,9 @@ dependencies = [
 
 [[package]]
 name = "fuel-derive"
-version = "0.59.1"
+version = "0.59.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8703ee10001e6a52ad9a0d8411ca5a92098de978ccfbdddd0ba185f3a7405b4c"
+checksum = "bb5b7bb2277f37f4b3d36b4c49257f1f5804cf7d8c0224f417115186d06ee249"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1633,7 +1645,7 @@ dependencies = [
  "fuel-asm 0.59.1",
  "fuel-crypto 0.59.1",
  "fuel-merkle 0.59.1",
- "fuel-types 0.59.1",
+ "fuel-types 0.59.2",
  "hashbrown 0.14.5",
  "itertools 0.10.5",
  "postcard",
@@ -1657,11 +1669,11 @@ dependencies = [
 
 [[package]]
 name = "fuel-types"
-version = "0.59.1"
+version = "0.59.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0d46d41db59c131195e6d842cc1e50f0b8adeadf2a840519e8b57b78e57a0bf"
+checksum = "db2cbad4962ba02b683f33686eb79c3002dde3791f3c71a4465d46601caba8b6"
 dependencies = [
- "fuel-derive 0.59.1",
+ "fuel-derive 0.59.2",
  "hex",
  "serde",
 ]
