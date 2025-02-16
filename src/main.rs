@@ -1,8 +1,9 @@
 #![feature(duration_constructors)]
 
 use std::env;
+use fuels::prelude::Provider;
 use crate::config::CONFIG;
-use crate::ports::blockchain::TxSync;
+use crate::ports::blockchain::{FuelRpcService, TxSync};
 use crate::ports::db::database_manager::DB_MANAGER;
 
 mod ports;
@@ -19,6 +20,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     log::info!("Starting application...");
+    //let provider = Provider::connect(CONFIG.default.rpc_url.as_str()).await?;
+
+    let service = FuelRpcService::new().await?;
+    //let res = service.get_logs_by_block_number(13480000).await?;
+
+    let res = service.get_logs_from_block_range(14507144,14517144).await;
+
     log::info!("Config: {}", CONFIG.default.server_port_http);
     let _ = DB_MANAGER.initialize().await;
 

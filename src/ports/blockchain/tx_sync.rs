@@ -64,6 +64,8 @@ impl TxSync{
 
             log::info!("TXS-{}: - Current block: {}",runner_id,current_block);
 
+            return Ok(());
+
             if current_block > start_block {
 
                 let mut updated_pairs: HashMap<Uuid, TokenPairsEntity> = HashMap::new();
