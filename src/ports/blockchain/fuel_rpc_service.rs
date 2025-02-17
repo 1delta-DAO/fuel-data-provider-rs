@@ -51,16 +51,17 @@ impl MiraEvent {
 }
 
 pub struct FuelRpcService {
-    provider: Provider,
+    providers: Vec<Provider>,
     cache: Arc<Mutex<HashMap<String, LogEvent>>>
 }
 
 impl FuelRpcService {
     pub async fn new() -> Result<Self, fuels::types::errors::Error> {
-        let provider = Provider::connect(CONFIG.default.rpc_url.as_str()).await?;
+        let provider1 = Provider::connect(CONFIG.default.rpc_url.as_str()).await?;
+        let provider2 = Provider::connect(CONFIG.default.rpc_url.as_str()).await?;
 
         Ok(FuelRpcService {
-            provider,
+            providers: vec![provider1, provider2],
             cache: Arc::new(Mutex::new(HashMap::new()))
         })
     }
@@ -73,15 +74,17 @@ impl FuelRpcService {
         log::info!("block: {} : {}", block_number, block.transactions.len());
 
         let mut logs = Vec::new();
+        //let mut rows: Vec<u32> = Vec::new();
 
         for tx in block.transactions {
-            if let Some(tx_response) = self.provider.get_transaction_by_id(&tx).await? {
+            if let Some(tx_response) = provider.get_transaction_by_id(&tx).await? {
                 let tr = tx_response.transaction.clone();
                 let receipts = tx_response.status.clone().take_receipts();
-                log::info!("Block: {} - Tx: {:?}", block_number, tr.clone());
+                //log::info!("Block: {} - Tx: {:?}", block_number, tr.clone());
+                //rows.push(block_number);
                 match tr {
                     TransactionType::Script(script_tx) => {
-                        log::info!("Type: STX");
+                        //log::info!("Type: STX");
                         let mira_contract_id = ContractId::from_str(CONFIG.default.cdi_mira_amm.as_str())?;
                         for input in script_tx.inputs() {
                             let cid = input.contract_id();
@@ -106,7 +109,6 @@ impl FuelRpcService {
                                                     Some(MiraEvent::Swap) => {
                                                         let event = SwapEvent::try_from(receipt.data().unwrap()).unwrap();
                                                         logs.push(event);
-                                                        //log::info!("Swap");
                                                     },
                                                     _ => {}
                                                 }
@@ -119,13 +121,13 @@ impl FuelRpcService {
                         }
                     },
                     TransactionType::Mint(mint_tx) => {
-                        log::info!("Type: Mint");
+                        //log::info!("Type: Mint");
                     },
                     TransactionType::Create(create_tx) => {
-                      log::info!("Type: Create");
+                      //log::info!("Type: Create");
                     },
                     _ => {
-                        log::info!("Type: Unknown");
+                        //log::info!("Type: Unknown");
                     }
                 }
             }
@@ -145,38 +147,21 @@ impl FuelRpcService {
             self.get_logs_by_block_number(block_number).await;
         }*/
 
-        let concurrent_requests = 200;
-        let provider = self.provider.clone();
-
-/*        let results = stream::iter(block_number_start..=block_number_end)
-            .map(|block_number| {
-                let provider = provider.clone();
-                async move {
-                    // Tworzymy nowe zapytanie dla każdego bloku używając sklonowanego providera
-                    let block = provider.block_by_height(BlockHeight::from(block_number)).await?.unwrap();
-                    let mut logs: Vec<LogEvent> = Vec::new();
-
-                    for tx in block.transactions {
-                        if let Some(tx_response) = provider.get_transaction_by_id(&tx).await? {
-                            let tr = tx_response.transaction.clone();
-                            let receipts = tx_response.status.clone().take_receipts();
-                            // ... reszta logiki przetwarzania bloków
-                            //log::info!("Block: {}", block_number);
-                        }
-                    }
-                    Ok::<_, fuels::types::errors::Error>(logs)
-                }
-            })
-            .buffer_unordered(concurrent_requests)
-            .collect::<Vec<_>>()
-            .await;
-*/
+        let concurrent_requests = 3;
+        //let provider = self.provider.clone();
 
         let results = stream::iter(block_number_start..=block_number_end)
             .map(|block_number| {
-                let provider = provider.clone();
+                //let provider = provider.clone();
+                let provider = self.providers[block_number_start as usize % self.providers.len()].clone();
                 async move {
-                    self.get_logs_by_block_number(&provider, block_number).await
+                    match self.get_logs_by_block_number(&provider, block_number).await {
+                        Ok(logs) => Ok(logs),
+                        Err(e) => {
+                            log::error!("Error processing block {}: {:?}", block_number, e);
+                            Err(e)
+                        }
+                    }
                 }
             })
             .buffer_unordered(concurrent_requests)

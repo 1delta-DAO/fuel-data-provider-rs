@@ -5,9 +5,9 @@ data_refresh_interval=300 # seconds
 #https://rpc.ankr.com/premium-http/fuel/2051d179b3f725afcd27cc235efcd67a84f709abfa6aaedd44de641782be8a2a
 #https://mainnet.fuel.network
 #rpc_url="https://rpc.ankr.com/premium-http/fuel/2051d179b3f725afcd27cc235efcd67a84f709abfa6aaedd44de641782be8a2a"
-#rpc_url="https://mainnet.fuel.network"
+rpc_url="https://mainnet.fuel.network"
 #rpc_url="https://testnet.fuel.network/v1/graphql"
-rpc_url="https://autumn-magical-glade.fuel-mainnet.quiknode.pro/v1/graphql"
+#rpc_url="https://autumn-magical-glade.fuel-mainnet.quiknode.pro/v1/graphql"
 db_url="localhost:5432/fuel_data"
 db_username="admin"
 db_password="admin"

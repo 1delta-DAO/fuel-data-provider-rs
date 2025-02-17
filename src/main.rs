@@ -25,7 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let service = FuelRpcService::new().await?;
     //let res = service.get_logs_by_block_number(13480000).await?;
 
-    let res = service.get_logs_from_block_range(14507144,14517144).await;
+    let res = service.get_logs_from_block_range(14516144,14517144).await;
 
     log::info!("Config: {}", CONFIG.default.server_port_http);
     let _ = DB_MANAGER.initialize().await;
