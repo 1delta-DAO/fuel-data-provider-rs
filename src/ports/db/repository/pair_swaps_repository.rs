@@ -1,6 +1,6 @@
 use crate::ports::db::model::{pair_swaps, sync_status};
 use crate::ports::db::model::pair_swaps::Model;
-use crate::ports::db::repository::{CrudRepository, SyncStatusRepository};
+use crate::ports::db::repository::CrudRepository;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sea_orm::{DbErr, EntityTrait, ColumnTrait, QueryFilter, TransactionTrait, ActiveValue, IntoActiveModel, ActiveModelTrait};

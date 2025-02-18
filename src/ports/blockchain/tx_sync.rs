@@ -1,21 +1,10 @@
-use std::collections::{HashMap, HashSet};
-use std::net::ToSocketAddrs;
+use std::collections::HashMap;
 use std::str::FromStr;
 use fuels::prelude::*;
 use std::time::Duration;
 use chrono::{DateTime, Utc};
-use fuels::tx::TxParameters;
 use fuels::types::BlockHeight;
-use fuel_tx::Input;
-use fuels::core::codec::{ABIDecoder, DecoderConfig};
-use fuels::types::coin_type_id::CoinTypeId::UtxoId;
-use fuels::types::output::Output;
-use fuels::types::param_types::ParamType;
-use log::error;
-use num_traits::AsPrimitive;
-use sea_orm::DbErr;
 use sea_orm::prelude::Decimal;
-use serde::Deserialize;
 use uuid::Uuid;
 use crate::config::CONFIG;
 use crate::domain::entity::{TokenEntity, TokenPairsEntity, UnknownTokenEntity};
@@ -24,10 +13,8 @@ use crate::domain::entity::pair_swaps_entity::PairSwapsEntity;
 use crate::domain::service::persistence::{PairSwapsService, SyncStatusService, TokenPairsService, TokenService, UnknownTokenService};
 use crate::domain::service::persistence::mira_pools_service::MiraPoolsService;
 use crate::ports::blockchain::blockchain_data_service::BlockchainDataService;
-use crate::ports::db::database_manager::DB_MANAGER;
-use crate::ports::db::model::prelude::PairSwaps;
-use crate::ports::db::model::unknown_token;
-use crate::ports::sentio::{Pool, SubgraphQueryService};
+use crate::ports::blockchain::fuel_model::Pool;
+use crate::ports::blockchain::FuelRpcService;
 
 pub struct TxSync;
 
@@ -44,7 +31,7 @@ abigen!(
 
 impl TxSync{
     pub async fn synchronize_transactions(runner_id: u8) -> Result<()> {
-        let provider = Provider::connect(CONFIG.default.rpc_url.as_str()).await?;
+        let provider = Provider::connect(CONFIG.default.rpc_url_one.as_str()).await?;
         let mut wallet = WalletUnlocked::new_random(None);
         wallet.set_provider(provider.clone());
 
@@ -55,16 +42,19 @@ impl TxSync{
 
         log::info!("TXS-{}: - Start block time: {:?}",runner_id,start_block_time);
 
-        let subgraph_service = SubgraphQueryService::new();
+        let fuel_rpc_service = FuelRpcService::new().await?;
+        //let subgraph_service = SubgraphQueryService::new();
 
         loop {
             let current_block = provider.latest_block_height().await?;
 
-            let _ = subgraph_service.initialize_cache(start_block,current_block).await;
+            let _ = fuel_rpc_service.initialize_cache(start_block);
+
+            //let _ = subgraph_service.initialize_cache(start_block,current_block).await;
 
             log::info!("TXS-{}: - Current block: {}",runner_id,current_block);
 
-            return Ok(());
+            //return Ok(());
 
             if current_block > start_block {
 
@@ -90,7 +80,9 @@ impl TxSync{
 
                             //let swaps = subgraph_service.get_logs_by_block_number(block_height).await.unwrap_or_else(|_| Vec::new());;
 
-                            let swaps = subgraph_service.get_logs_by_block_number_from_cache(block_height);
+                            //let swaps = subgraph_service.get_logs_by_block_number_from_cache(block_height);
+                            //let swaps = fuel_rpc_service.get_logs(block_height).unwrap_or_else(|_| Vec::new());
+                        let swaps = fuel_rpc_service.get_logs(block_height).await?;
 
                             if !swaps.is_empty(){
 
@@ -99,7 +91,7 @@ impl TxSync{
 
                                 for swap in swaps {
 
-                                    let pool = Pool::from_pool_id(&swap.pool_id).unwrap();
+                                    let pool = Pool::from_swap(&swap.swap_event).unwrap();
                                     //log::info!("Pool: {:?}",pool);
                                     let token_base
                                         = get_mira_token_details_by_asset_id(&provider,&AssetId::from_str(pool.token0_address.as_str()).unwrap()).await.unwrap_or(None);
@@ -116,11 +108,11 @@ impl TxSync{
                                                 id: Uuid::new_v4(),
                                                 block_number: block_height.to_string(),
                                                 block_time: Some(block_time),
-                                                tx_id: swap.transaction_hash,
+                                                tx_id: swap.tx_id,
                                                 utxo_id: "".to_string(),
                                                 pair_id: token_pair.id,
-                                                base_amount: Decimal::from(swap.token_0in.parse::<u64>().unwrap()),
-                                                quote_amount: Decimal::from(swap.token_1out.parse::<u64>().unwrap()),
+                                                base_amount: Decimal::from(swap.swap_event.asset_0_in),
+                                                quote_amount: Decimal::from(swap.swap_event.asset_1_out),
                                                 created_at: Utc::now(),
                                                 updated_at: Utc::now(),
                                             };
@@ -432,7 +424,7 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
 async fn get_mira_pool_metadata(mut pool: MiraPoolsEntity) -> MiraPoolsEntity {
     match TokenPairsService::find_by_id(pool.pair_id).await {
         Ok(Some(token_pair)) => {
-            if let Ok(provider) = Provider::connect(CONFIG.default.rpc_url.as_str()).await {
+            if let Ok(provider) = Provider::connect(CONFIG.default.rpc_url_one.as_str()).await {
                 let mut wallet = WalletUnlocked::new_random(None);
                 wallet.set_provider(provider.clone());
 

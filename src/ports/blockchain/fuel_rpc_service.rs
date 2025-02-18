@@ -2,20 +2,15 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
-use fuel_tx::{ContractId, Receipt};
-use futures::future::join_all;
 use fuels::{
     accounts::provider::Provider,
-    types::{
-        transaction_response::TransactionResponse,
-    },
 };
-use fuels::client::{PageDirection, PaginationRequest};
 use fuels::prelude::{Transaction, TransactionType};
-use fuels::types::BlockHeight;
+use fuels::tx::Receipt;
+use fuels::types::{BlockHeight, ContractId};
 use futures::{stream, StreamExt};
-use tokio::task::JoinHandle;
 use crate::config::CONFIG;
+use crate::ports::blockchain::fuel_model::Swap;
 use crate::ports::blockchain::tx_sync::SwapEvent;
 
 #[derive(Debug, Clone)]
@@ -52,13 +47,14 @@ impl MiraEvent {
 
 pub struct FuelRpcService {
     providers: Vec<Provider>,
+    //TODO - we have to clean this cache
     cache: Arc<Mutex<HashMap<String, LogEvent>>>
 }
 
 impl FuelRpcService {
     pub async fn new() -> Result<Self, fuels::types::errors::Error> {
-        let provider1 = Provider::connect(CONFIG.default.rpc_url.as_str()).await?;
-        let provider2 = Provider::connect(CONFIG.default.rpc_url.as_str()).await?;
+        let provider1 = Provider::connect(CONFIG.default.rpc_url_one.as_str()).await?;
+        let provider2 = Provider::connect(CONFIG.default.rpc_url_two.as_str()).await?;
 
         Ok(FuelRpcService {
             providers: vec![provider1, provider2],
@@ -66,7 +62,26 @@ impl FuelRpcService {
         })
     }
 
-    pub async fn get_logs_by_block_number(&self, provider: &Provider, block_number: u32) -> Result<Vec<SwapEvent>, fuels::types::errors::Error> {
+    pub async fn initialize_cache(&self, from_block: u32) -> Result<(), fuels::types::errors::Error> {
+        let latest_block_number = self.providers[0].latest_block_height().await?;
+
+        if from_block > latest_block_number {
+            return Err(fuels::types::errors::Error::Provider(
+                "Start block is higher than the latest block".into()
+            ));
+        }
+
+        log::info!(
+            "Initializing cache from block {} to {}",
+            from_block,
+            latest_block_number
+        );
+
+        self.get_logs_from_block_range(from_block, latest_block_number).await;
+        Ok(())
+    }
+
+    pub async fn get_logs_by_block_number(&self, provider: &Provider, block_number: u32) -> Result<Vec<Swap>, fuels::types::errors::Error> {
 
         //log::info!("Block: {}", block_number);
 
@@ -107,7 +122,10 @@ impl FuelRpcService {
 
                                                 match MiraEvent::from_u64(log_id) {
                                                     Some(MiraEvent::Swap) => {
-                                                        let event = SwapEvent::try_from(receipt.data().unwrap()).unwrap();
+                                                        let event = Swap{
+                                                            tx_id:tx.clone().to_string(),
+                                                            swap_event: SwapEvent::try_from(receipt.data().unwrap()).unwrap()
+                                                        };
                                                         logs.push(event);
                                                     },
                                                     _ => {}
@@ -135,7 +153,7 @@ impl FuelRpcService {
                 log::info!("Tx not found");
             }
         }
-        if(logs.len() > 0) {
+        if logs.len() > 0 {
             log::info!("Swaps in logs: {}", logs.len());
         }
         Ok(logs)
@@ -143,16 +161,11 @@ impl FuelRpcService {
     pub async fn get_logs_from_block_range(&self, block_number_start: u32, block_number_end: u32){
 
         let start_time = Instant::now();
-/*        for block_number in block_number_start..=block_number_end {
-            self.get_logs_by_block_number(block_number).await;
-        }*/
 
-        let concurrent_requests = 3;
-        //let provider = self.provider.clone();
+        let concurrent_requests = 8;
 
         let results = stream::iter(block_number_start..=block_number_end)
             .map(|block_number| {
-                //let provider = provider.clone();
                 let provider = self.providers[block_number_start as usize % self.providers.len()].clone();
                 async move {
                     match self.get_logs_by_block_number(&provider, block_number).await {
@@ -178,5 +191,52 @@ impl FuelRpcService {
         let duration = start_time.elapsed();
         log::info!("Cache initialization took: {:?} cache size: {}", duration, all_logs.len());
 
+    }
+
+    pub async fn get_logs(&self, requested_block: u32) -> Result<Vec<Swap>, fuels::types::errors::Error> {
+
+        // First check if block exists in cache
+        let latest_cached_block = self.get_latest_cached_block();
+
+        if let Some(cached_block) = latest_cached_block {
+            if requested_block <= cached_block {
+                // We already have this block in cache
+                let provider = &self.providers[0];
+                return self.get_logs_by_block_number(provider, requested_block).await;
+            }
+        }
+
+        // If we get here, we need to update the cache
+        // Now we need to check the latest block from the blockchain
+        let latest_block_number = self.providers[0].latest_block_height().await?;
+
+        if requested_block > latest_block_number {
+            return Err(fuels::types::errors::Error::Provider(
+                "Requested block is higher than the latest block".into()
+            ));
+        }
+
+        // Update cache from the last cached block (or requested block if cache is empty)
+        let start_block = latest_cached_block.map(|b| b + 1).unwrap_or(requested_block);
+
+        log::info!(
+            "Updating cache from block {} to {}",
+            start_block,
+            latest_block_number
+        );
+
+        self.get_logs_from_block_range(start_block, latest_block_number).await;
+
+        // Return the logs for the requested block
+        let provider = &self.providers[0];
+        self.get_logs_by_block_number(provider, requested_block).await
+
+    }
+
+    fn get_latest_cached_block(&self) -> Option<u32> {
+        let cache = self.cache.lock().unwrap();
+        cache.keys()
+            .map(|k| k.parse::<u32>().unwrap_or(0))
+            .max()
     }
 }
