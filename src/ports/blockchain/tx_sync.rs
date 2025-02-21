@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::str::FromStr;
-use fuels::prelude::*;
 use std::time::Duration;
 use chrono::{DateTime, Utc};
-use fuels::types::BlockHeight;
+use fuels::prelude::{abigen, Bech32ContractId, Error, Execution, Provider, WalletUnlocked};
+use fuels::types::{AssetId, BlockHeight, ContractId};
 use sea_orm::prelude::Decimal;
 use uuid::Uuid;
 use crate::config::CONFIG;
@@ -30,7 +30,7 @@ abigen!(
 );
 
 impl TxSync{
-    pub async fn synchronize_transactions(runner_id: u8) -> Result<()> {
+    pub async fn synchronize_transactions(runner_id: u8) -> Result<(), Error> {
         let provider = Provider::connect(CONFIG.default.rpc_url_one.as_str()).await?;
         let mut wallet = WalletUnlocked::new_random(None);
         wallet.set_provider(provider.clone());
@@ -48,13 +48,22 @@ impl TxSync{
         loop {
             let current_block = provider.latest_block_height().await?;
 
-            let _ = fuel_rpc_service.initialize_cache(start_block);
+            log::info!("TXS-{}: - Current block: {}",runner_id,current_block);
+
+            for block_height in start_block..=current_block {
+                if is_block_in_calc_window(&provider, block_height as u64).await {
+                    let _ = fuel_rpc_service.initialize_cache(block_height).await?;
+                    start_block = block_height;
+                    break;
+                }
+            }
+
+
+            //return Ok(());
 
             //let _ = subgraph_service.initialize_cache(start_block,current_block).await;
 
-            log::info!("TXS-{}: - Current block: {}",runner_id,current_block);
 
-            //return Ok(());
 
             if current_block > start_block {
 
@@ -224,7 +233,7 @@ async fn is_block_in_calc_window(provider: &Provider, block_number: u64) -> bool
     block_time >= cutoff_time
 }
 
-async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>>{
+async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>, Error>{
 
     log::info!("Fetching token details by asset_id: {}",asset_id.to_string());
     let token = TokenService::find_by_address(&asset_id.to_string()).await.unwrap();
@@ -305,7 +314,7 @@ async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -
 
 }
 
-async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>>{
+async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>,Error>{
 
     log::info!("Fetching mira token details by asset_id: {}",asset_id.to_string());
     let token = TokenService::find_by_address(&asset_id.to_string()).await.unwrap();

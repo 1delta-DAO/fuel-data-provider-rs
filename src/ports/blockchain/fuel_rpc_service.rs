@@ -2,11 +2,11 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
+use fuel_tx::Receipt;
 use fuels::{
     accounts::provider::Provider,
 };
-use fuels::prelude::{Transaction, TransactionType};
-use fuels::tx::Receipt;
+use fuels::prelude::{Error, Transaction, TransactionType};
 use fuels::types::{BlockHeight, ContractId};
 use futures::{stream, StreamExt};
 use crate::config::CONFIG;
@@ -85,8 +85,15 @@ impl FuelRpcService {
 
         //log::info!("Block: {}", block_number);
 
-        let block = provider.block_by_height(BlockHeight::from(block_number)).await?.unwrap();
+        let last_block = provider.block_by_height(BlockHeight::from(block_number)).await?;
+
+        if last_block.is_none() {
+            return Ok(Vec::new());
+        }
+        let block = last_block.unwrap();
+
         log::info!("block: {} : {}", block_number, block.transactions.len());
+
 
         let mut logs = Vec::new();
         //let mut rows: Vec<u32> = Vec::new();
@@ -211,6 +218,8 @@ impl FuelRpcService {
         let latest_block_number = self.providers[0].latest_block_height().await?;
 
         if requested_block > latest_block_number {
+            log::info!("latest_block_number: {}", latest_block_number);
+            log::info!("requested_block: {}", requested_block);
             return Err(fuels::types::errors::Error::Provider(
                 "Requested block is higher than the latest block".into()
             ));
