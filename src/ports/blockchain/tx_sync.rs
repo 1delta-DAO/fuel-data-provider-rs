@@ -227,7 +227,7 @@ async fn is_block_in_calc_window(provider: &Provider, block_number: u64) -> bool
     let window_range_hours = CONFIG.default.calculation_window as i64;
 
     // Calculate the cutoff time
-    let cutoff_time = Utc::now() - Duration::from_hours(window_range_hours as u64);
+    let cutoff_time = Utc::now() - Duration::from_mins(window_range_hours as u64);
 
     // Check if the block_time is within the calculation window
     block_time >= cutoff_time

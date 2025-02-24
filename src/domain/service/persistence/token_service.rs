@@ -1,12 +1,27 @@
+use chrono::{DateTime, Utc};
 use crate::domain::entity::entity::Entity;
 use crate::ports::db::model::token::{self};
 use crate::ports::db::repository::{CrudRepository, TokenRepository};
 use sea_orm::{DbErr, IntoActiveModel};
 use crate::domain::entity::TokenEntity;
+use crate::ports::db;
 
 pub struct TokenService;
 
 impl TokenService {
+
+    /// Finds all tokens created between two timestamps
+    pub async fn find_by_created_between(start: DateTime<Utc>, end: DateTime<Utc>) -> Result<Vec<TokenEntity>, DbErr> {
+        let models = TokenRepository::find_by_created_between(start, end).await?;
+        Ok(models.into_iter().map(|model: token::Model| TokenEntity::from_model(&model)).collect())
+    }
+
+    /// Finds all tokens
+    pub async fn find_all_tokens() -> Result<Vec<TokenEntity>, DbErr> {
+        let models = TokenRepository::find_all().await?;
+        Ok(models.into_iter().map(|model: token::Model| TokenEntity::from_model(&model)).collect())
+    }
+
     /// Finds a token by its address
     pub async fn find_by_address(address: &str) -> Result<Option<TokenEntity>, DbErr> {
         if let Some(model) = TokenRepository::find_by_address(address).await? {

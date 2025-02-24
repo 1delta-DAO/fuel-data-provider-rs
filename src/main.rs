@@ -23,7 +23,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     log::info!("Config: {}", CONFIG.default.server_port_http);
     let _ = DB_MANAGER.initialize().await;
 
-    let tx_sync_handle_one = tokio::spawn(async{
+    let tx_sync_handle = tokio::spawn(async{
         log::info!("Starting TX Sync service - Runner 1 ...");
         match TxSync::synchronize_transactions(1).await{
             Ok(_) => println!("Synchronization finished successfully."),
@@ -31,8 +31,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    let server_handle = tokio::spawn(async {
+        let routes = api::rest::routes::routes();
+        log::info!("Starting HTTP server on port 3030...");
+        warp::serve(routes).run(([0, 0, 0, 0], 3030)).await;
+    });
+
+
     if let Err(e) = tokio::try_join!(
-        tx_sync_handle_one
+        tx_sync_handle,
+        server_handle
         ) {
         log::error!("Error occurred while joining tasks: {:?}", e);
     }

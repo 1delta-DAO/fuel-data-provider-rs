@@ -1,9 +1,10 @@
 use crate::domain::entity::entity::Entity;
 use crate::ports::db::model::token::Model;
 use chrono::{DateTime, Utc};
+use serde::Serialize;
 use uuid::Uuid;
 
-#[derive(Debug)]
+#[derive(Debug,Serialize)]
 pub struct TokenEntity {
     pub id: Uuid,
     pub address: String,
