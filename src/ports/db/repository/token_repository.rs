@@ -18,6 +18,7 @@ impl TokenRepository {
 
     pub async fn find_by_created_between(start: DateTime<Utc>, end: DateTime<Utc>) -> Result<Vec<Model>, DbErr> {
         let db = &crate::ports::db::database_manager::DB_MANAGER.get_connection().await.unwrap();
+        log::info!("Fetching tokens between {} and {}", start, end);
         token::Entity::find()
             .filter(token::Column::CreatedAt.between(start,end))
             .all(db)

@@ -37,7 +37,7 @@ impl TxSync{
 
         //let mut start_block:u32 = provider.latest_block_height().await?; // get_start_block_number().await;
         let mut start_block:u32 = get_start_block_number().await;
-        log::info!(" TXS-{}: Starting from block: {}",runner_id,start_block);
+        log::info!("TXS-{}: Starting from block: {}",runner_id,start_block);
         let start_block_time = get_block_time_by_block_height(&provider, start_block).await;
 
         log::info!("TXS-{}: - Start block time: {:?}",runner_id,start_block_time);
@@ -92,6 +92,7 @@ impl TxSync{
                             //let swaps = subgraph_service.get_logs_by_block_number_from_cache(block_height);
                             //let swaps = fuel_rpc_service.get_logs(block_height).unwrap_or_else(|_| Vec::new());
                         let swaps = fuel_rpc_service.get_logs(block_height).await?;
+                        log::info!("Block {} - Swaps: {}",block_height,swaps.len());
 
                             if !swaps.is_empty(){
 

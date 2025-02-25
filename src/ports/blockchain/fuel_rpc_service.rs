@@ -48,7 +48,7 @@ impl MiraEvent {
 pub struct FuelRpcService {
     providers: Vec<Provider>,
     //TODO - we have to clean this cache
-    cache: Arc<Mutex<HashMap<String, LogEvent>>>
+    cache: Arc<Mutex<HashMap<String, Vec<Swap>>>>
 }
 
 impl FuelRpcService {
@@ -163,20 +163,25 @@ impl FuelRpcService {
         if logs.len() > 0 {
             log::info!("Swaps in logs: {}", logs.len());
         }
+        //self.cache.lock().unwrap().insert(block_number.to_string(), logs.clone());
         Ok(logs)
     }
-    pub async fn get_logs_from_block_range(&self, block_number_start: u32, block_number_end: u32){
+    //TODO - should be removed?
+    async fn get_logs_from_block_range(&self, block_number_start: u32, block_number_end: u32){
 
         let start_time = Instant::now();
 
-        let concurrent_requests = 3;
+        let concurrent_requests = 6;
 
         let results = stream::iter(block_number_start..=block_number_end)
             .map(|block_number| {
                 let provider = self.providers[block_number_start as usize % self.providers.len()].clone();
                 async move {
                     match self.get_logs_by_block_number(&provider, block_number).await {
-                        Ok(logs) => Ok(logs),
+                        Ok(logs) => {
+                            self.cache.lock().unwrap().insert(block_number.to_string(), logs.clone());
+                            Ok(logs)
+                        },
                         Err(e) => {
                             log::error!("Error processing block {}: {:?}", block_number, e);
                             Err(e)
@@ -196,50 +201,57 @@ impl FuelRpcService {
         }
 
         let duration = start_time.elapsed();
-        log::info!("Cache initialization took: {:?} cache size: {}", duration, all_logs.len());
+        log::info!("Cache update took: {:?} cache size: {}", duration, self.cache.lock().unwrap().len() );
 
     }
 
     pub async fn get_logs(&self, requested_block: u32) -> Result<Vec<Swap>, fuels::types::errors::Error> {
 
-        // First check if block exists in cache
-        let latest_cached_block = self.get_latest_cached_block();
+        let logs = self.cache.lock().unwrap().get(&requested_block.to_string()).map(|v| v.clone()).unwrap_or(Vec::new());
 
-        if let Some(cached_block) = latest_cached_block {
-            if requested_block <= cached_block {
-                // We already have this block in cache
-                let provider = &self.providers[0];
-                return self.get_logs_by_block_number(provider, requested_block).await;
+        if logs.len() > 0 {
+            log::info!("Swaps in cache: {}", logs.len());
+            return Ok(logs);
+        }
+        else{
+            // First check if block exists in cache
+            let latest_cached_block = self.get_latest_cached_block();
+
+            if let Some(cached_block) = latest_cached_block {
+                if requested_block <= cached_block {
+                    // We already have this block in cache
+                    let provider = &self.providers[0];
+                    return self.get_logs_by_block_number(provider, requested_block).await;
+                }
             }
-        }
 
-        // If we get here, we need to update the cache
-        // Now we need to check the latest block from the blockchain
-        let latest_block_number = self.providers[0].latest_block_height().await?;
+            // If we get here, we need to update the cache
+            // Now we need to check the latest block from the blockchain
+            let latest_block_number = self.providers[0].latest_block_height().await?;
 
-        if requested_block > latest_block_number {
-            log::info!("latest_block_number: {}", latest_block_number);
-            log::info!("requested_block: {}", requested_block);
-            return Err(fuels::types::errors::Error::Provider(
-                "Requested block is higher than the latest block".into()
-            ));
-        }
+            if requested_block > latest_block_number {
+                log::info!("latest_block_number: {}", latest_block_number);
+                log::info!("requested_block: {}", requested_block);
+                return Err(fuels::types::errors::Error::Provider(
+                    "Requested block is higher than the latest block".into()
+                ));
+            }
 
-        // Update cache from the last cached block (or requested block if cache is empty)
-        let start_block = latest_cached_block.map(|b| b + 1).unwrap_or(requested_block);
+            // Update cache from the last cached block (or requested block if cache is empty)
+            let start_block = latest_cached_block.map(|b| b + 1).unwrap_or(requested_block);
 
-        log::info!(
+            log::info!(
             "Updating cache from block {} to {}",
             start_block,
             latest_block_number
         );
 
-        self.get_logs_from_block_range(start_block, latest_block_number).await;
+            self.get_logs_from_block_range(start_block, latest_block_number).await;
 
-        // Return the logs for the requested block
-        let provider = &self.providers[0];
-        self.get_logs_by_block_number(provider, requested_block).await
-
+            // Return the logs for the requested block
+            let provider = &self.providers[0];
+            self.get_logs_by_block_number(provider, requested_block).await
+        }
     }
 
     fn get_latest_cached_block(&self) -> Option<u32> {
