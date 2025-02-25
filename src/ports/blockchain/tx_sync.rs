@@ -43,6 +43,7 @@ impl TxSync{
         log::info!("TXS-{}: - Start block time: {:?}",runner_id,start_block_time);
 
         let fuel_rpc_service = FuelRpcService::new().await?;
+        //let _ = fuel_rpc_service.initialize_cache(start_block).await?;
         //let subgraph_service = SubgraphQueryService::new();
 
         loop {
@@ -50,13 +51,13 @@ impl TxSync{
 
             log::info!("TXS-{}: - Current block: {}",runner_id,current_block);
 
-            for block_height in start_block..=current_block {
+/*            for block_height in start_block..=current_block {
                 if is_block_in_calc_window(&provider, block_height as u64).await {
                     let _ = fuel_rpc_service.initialize_cache(block_height).await?;
                     start_block = block_height;
                     break;
                 }
-            }
+            }*/
 
 
             //return Ok(());

@@ -92,7 +92,7 @@ impl FuelRpcService {
         }
         let block = last_block.unwrap();
 
-        log::info!("block: {} : {}", block_number, block.transactions.len());
+        //log::info!("block: {} : {}", block_number, block.transactions.len());
 
 
         let mut logs = Vec::new();
@@ -163,7 +163,6 @@ impl FuelRpcService {
         if logs.len() > 0 {
             log::info!("Swaps in logs: {}", logs.len());
         }
-        //self.cache.lock().unwrap().insert(block_number.to_string(), logs.clone());
         Ok(logs)
     }
     //TODO - should be removed?
@@ -171,7 +170,7 @@ impl FuelRpcService {
 
         let start_time = Instant::now();
 
-        let concurrent_requests = 6;
+        let concurrent_requests = 2;
 
         let results = stream::iter(block_number_start..=block_number_end)
             .map(|block_number| {
