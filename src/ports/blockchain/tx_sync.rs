@@ -193,6 +193,7 @@ async fn refresh_mira_pool(mira_pool: MiraPoolsEntity) -> MiraPoolsEntity{
 }
 
 async fn get_block_time_by_block_height(provider: &Provider, block_height: u32) -> fuels::prelude::Result<DateTime<Utc>> {
+    log::info!("Fetching block time by block height: {}",block_height);
     let block = provider.block_by_height(BlockHeight::new(block_height.clone())).await?;
     Ok(block.unwrap().header.time.unwrap())
 }

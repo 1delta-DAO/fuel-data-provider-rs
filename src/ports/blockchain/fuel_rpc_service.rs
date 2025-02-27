@@ -2,11 +2,11 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
-use fuel_tx::Receipt;
 use fuels::{
     accounts::provider::Provider,
 };
 use fuels::prelude::{Error, Transaction, TransactionType};
+use fuels::tx::Receipt;
 use fuels::types::{BlockHeight, ContractId};
 use futures::{stream, StreamExt};
 use crate::config::CONFIG;
@@ -53,11 +53,13 @@ pub struct FuelRpcService {
 
 impl FuelRpcService {
     pub async fn new() -> Result<Self, fuels::types::errors::Error> {
-        let provider1 = Provider::connect(CONFIG.default.rpc_url_one.as_str()).await?;
-        let provider2 = Provider::connect(CONFIG.default.rpc_url_two.as_str()).await?;
+
+        let provider1= Provider::connect(CONFIG.default.rpc_url_one.as_str()).await?;
+        let provider2= Provider::connect(CONFIG.default.rpc_url_two.as_str()).await?;
+        let provider3= Provider::connect(CONFIG.default.rpc_url_three.as_str()).await?;
 
         Ok(FuelRpcService {
-            providers: vec![provider1, provider2],
+            providers: vec![provider1, provider2, provider3],
             cache: Arc::new(Mutex::new(HashMap::new()))
         })
     }
@@ -83,7 +85,7 @@ impl FuelRpcService {
 
     pub async fn get_logs_by_block_number(&self, provider: &Provider, block_number: u32) -> Result<Vec<Swap>, fuels::types::errors::Error> {
 
-        //log::info!("Block: {}", block_number);
+        log::info!("Block: {}", block_number);
 
         let last_block = provider.block_by_height(BlockHeight::from(block_number)).await?;
 
@@ -92,7 +94,7 @@ impl FuelRpcService {
         }
         let block = last_block.unwrap();
 
-        //log::info!("block: {} : {}", block_number, block.transactions.len());
+        log::info!("block: {} : {}", block_number, block.transactions.len());
 
 
         let mut logs = Vec::new();
@@ -170,7 +172,7 @@ impl FuelRpcService {
 
         let start_time = Instant::now();
 
-        let concurrent_requests = 2;
+        let concurrent_requests = 3;
 
         let results = stream::iter(block_number_start..=block_number_end)
             .map(|block_number| {

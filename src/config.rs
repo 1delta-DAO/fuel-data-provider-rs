@@ -18,6 +18,7 @@ pub struct DefaultConfig {
     pub data_refresh_interval: u64,
     pub rpc_url_one: String,
     pub rpc_url_two: String,
+    pub rpc_url_three: String,
     pub tx_log_start_block_number: u64,
     pub calculation_window: u16,
     pub cdi_fuel_token_gateway: String,
@@ -48,6 +49,7 @@ pub enum EnvVar {
     DataRefreshInterval,
     RpcUrlOne,
     RpcUrlTwo,
+    RpcUrlThree,
     TxLogStartBlockNumber,
     CalculationWindow,
     CdiFuelTokenGateway,
@@ -76,6 +78,7 @@ impl fmt::Display for EnvVar {
             EnvVar::DataRefreshInterval => "DATA_REFRESH_INTERVAL",
             EnvVar::RpcUrlOne => "RPC_URL_ONE",
             EnvVar::RpcUrlTwo => "RPC_URL_TWO",
+            EnvVar::RpcUrlThree => "RPC_URL_THREE",
             EnvVar::TxLogStartBlockNumber => "TX_LOG_START_BLOCK_NUMBER",
             EnvVar::CalculationWindow => "CALCULATION_WINDOW",
             EnvVar::CdiFuelTokenGateway => "CDI_FUEL_TOKEN_GATEWAY",
@@ -140,6 +143,7 @@ pub fn load_config_from_env_or_file() -> Result<AppConfig, Box<dyn Error>> {
         EnvVar::DataRefreshInterval.get_value(config.default.data_refresh_interval);
     config.default.rpc_url_one = EnvVar::RpcUrlOne.get_value(config.default.rpc_url_one.clone());
     config.default.rpc_url_two = EnvVar::RpcUrlTwo.get_value(config.default.rpc_url_two.clone());
+    config.default.rpc_url_three = EnvVar::RpcUrlThree.get_value(config.default.rpc_url_three.clone());
     config.default.tx_log_start_block_number =
         EnvVar::TxLogStartBlockNumber.get_value(config.default.tx_log_start_block_number);
     config.default.calculation_window =
