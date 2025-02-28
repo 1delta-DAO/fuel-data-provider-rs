@@ -4,10 +4,10 @@ use crate::ports::db::model::token::{self};
 use crate::ports::db::repository::{CrudRepository, TokenRepository};
 use sea_orm::{DbErr, IntoActiveModel};
 use crate::domain::entity::TokenEntity;
-use crate::ports::db;
 
 pub struct TokenService;
 
+#[allow(dead_code)]
 impl TokenService {
 
     /// Finds all tokens created between two timestamps

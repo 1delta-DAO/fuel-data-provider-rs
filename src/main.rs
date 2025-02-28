@@ -1,7 +1,6 @@
 #![feature(duration_constructors)]
 
 use std::env;
-use fuels::prelude::Provider;
 use crate::config::CONFIG;
 use crate::ports::blockchain::TxSync;
 use crate::ports::db::database_manager::DB_MANAGER;

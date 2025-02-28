@@ -9,6 +9,7 @@ use crate::ports::db::repository::{CrudRepository, PairSwapsRepository};
 /// Service layer for handling operations related to `PairSwapsEntity`
 pub struct PairSwapsService;
 
+#[allow(dead_code)]
 impl PairSwapsService {
     /// Retrieves all records matching the given `pair_id` and converts them to domain entities
     pub async fn get_by_pair_id(pair_id: Uuid) -> Result<Vec<PairSwapsEntity>, DbErr> {

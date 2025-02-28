@@ -5,7 +5,6 @@ use sea_orm::prelude::{DateTimeWithTimeZone, Decimal};
 use uuid::Uuid;
 use crate::domain::entity::entity::Entity;
 use crate::domain::entity::mira_pools_entity::MiraPoolsEntity;
-use crate::domain::entity::TokenEntity;
 
 pub struct MiraPoolsService;
 

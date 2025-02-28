@@ -1,4 +1,3 @@
-use chrono::{DateTime, Utc};
 use warp::Filter;
 use crate::api::rest::endpoint::{get_tokens, get_tokens_by_time_range, QueryParams};
 

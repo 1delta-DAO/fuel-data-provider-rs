@@ -36,7 +36,7 @@ impl TxSync{
         wallet.set_provider(provider.clone());
 
         //let mut start_block:u32 = provider.latest_block_height().await?; // get_start_block_number().await;
-        let mut start_block:u32 = get_start_block_number().await;
+        let start_block:u32 = get_start_block_number().await;
         log::info!("TXS-{}: Starting from block: {}",runner_id,start_block);
         let start_block_time = get_block_time_by_block_height(&provider, start_block).await;
 
@@ -147,7 +147,7 @@ impl TxSync{
                 }
 
                 if updated_pairs.len() > 0{
-                    for (id,pair) in &updated_pairs{
+                    for (_id,pair) in &updated_pairs{
                         find_or_create_mira_pool(pair.id).await;
                     }
                 }
@@ -199,7 +199,7 @@ async fn get_block_time_by_block_height(provider: &Provider, block_height: u32) 
 }
 
 async fn get_start_block_number() ->u32 {
-    let mut block_number = 0;
+    let mut block_number: u32;
     match SyncStatusService::get_status_entity().await {
         Ok(Some(sync_status_entity)) => {
             block_number = sync_status_entity.block_number as u32 +1
@@ -208,7 +208,7 @@ async fn get_start_block_number() ->u32 {
         Err(_) => { block_number = 0; },//TODO - Exception management
     }
     if block_number <= 1{
-        block_number = CONFIG.default.tx_log_start_block_number as u32;
+        block_number = CONFIG.default.tx_log_start_block_number.clone() as u32;
     }
     block_number
 }
@@ -227,7 +227,7 @@ async fn is_block_in_calc_window(provider: &Provider, block_number: u64) -> bool
     };
 
     // Get the calculation window in hours from the config
-    let window_range_hours = CONFIG.default.calculation_window as i64;
+    let window_range_hours = CONFIG.default.calculation_window.clone() as i64;
 
     // Calculate the cutoff time
     let cutoff_time = Utc::now() - Duration::from_mins(window_range_hours as u64);

@@ -1,9 +1,6 @@
-use std::collections::HashMap;
 use std::convert::Infallible;
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
-use uuid::Uuid;
 use warp::{Filter, Rejection, Reply};
-use crate::domain::entity::TokenEntity;
 use crate::domain::service::persistence::TokenService;
 
 /*

@@ -6,6 +6,7 @@ use crate::domain::entity::{TokenEntity, TokenPairsEntity};
 
 pub struct TokenPairsService;
 
+#[allow(dead_code)]
 impl TokenPairsService {
     /// Finds a token pair by `base_token_details_id` and `quote_token_details_id`
     pub async fn find_by_token_ids(

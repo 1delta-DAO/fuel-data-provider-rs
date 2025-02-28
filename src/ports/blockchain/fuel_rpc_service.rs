@@ -5,7 +5,7 @@ use std::time::Instant;
 use fuels::{
     accounts::provider::Provider,
 };
-use fuels::prelude::{Error, Transaction, TransactionType};
+use fuels::prelude::{Transaction, TransactionType};
 use fuels::tx::Receipt;
 use fuels::types::{BlockHeight, ContractId};
 use futures::{stream, StreamExt};
@@ -64,7 +64,7 @@ impl FuelRpcService {
         })
     }
 
-    pub async fn initialize_cache(&self, from_block: u32) -> Result<(), fuels::types::errors::Error> {
+/*    pub async fn initialize_cache(&self, from_block: u32) -> Result<(), fuels::types::errors::Error> {
         let latest_block_number = self.providers[0].latest_block_height().await?;
 
         if from_block > latest_block_number {
@@ -81,7 +81,7 @@ impl FuelRpcService {
 
         self.get_logs_from_block_range(from_block, latest_block_number).await;
         Ok(())
-    }
+    }*/
 
     pub async fn get_logs_by_block_number(&self, provider: &Provider, block_number: u32) -> Result<Vec<Swap>, fuels::types::errors::Error> {
 
@@ -116,17 +116,7 @@ impl FuelRpcService {
                                 if mira_contract_id == cid.unwrap().clone() {
                                     for receipt in receipts.clone() {
                                         match receipt.clone() {
-                                            Receipt::LogData {
-                                                id,
-                                                ra,
-                                                rb,
-                                                ptr,
-                                                len,
-                                                digest,
-                                                pc,
-                                                is,
-                                                data,
-                                            } => {
+                                            Receipt::LogData {..} => {
                                                 let log_id = receipt.rb().unwrap() as u64;
 
                                                 match MiraEvent::from_u64(log_id) {

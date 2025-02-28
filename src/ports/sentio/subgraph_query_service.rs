@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use num_traits::AsPrimitive;
 use reqwest::Client;
 use serde_json::json;
 use crate::config::CONFIG;
-use crate::ports::sentio::{ApiResponse, Pool, SwapEvent, SyncSqlResult};
+use crate::ports::sentio::{ApiResponse, SwapEvent};
 
 const BATCH_SIZE: usize = 100;
 
@@ -15,6 +14,7 @@ pub struct SubgraphQueryService {
     cache: Arc<Mutex<HashMap<String, SwapEvent>>>,
 }
 
+#[allow(dead_code)]
 impl SubgraphQueryService {
     pub fn new() -> Self {
         SubgraphQueryService {
