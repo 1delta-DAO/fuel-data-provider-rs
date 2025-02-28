@@ -64,25 +64,6 @@ impl FuelRpcService {
         })
     }
 
-/*    pub async fn initialize_cache(&self, from_block: u32) -> Result<(), fuels::types::errors::Error> {
-        let latest_block_number = self.providers[0].latest_block_height().await?;
-
-        if from_block > latest_block_number {
-            return Err(fuels::types::errors::Error::Provider(
-                "Start block is higher than the latest block".into()
-            ));
-        }
-
-        log::info!(
-            "Initializing cache from block {} to {}",
-            from_block,
-            latest_block_number
-        );
-
-        self.get_logs_from_block_range(from_block, latest_block_number).await;
-        Ok(())
-    }*/
-
     pub async fn get_logs_by_block_number(&self, provider: &Provider, block_number: u32) -> Result<Vec<Swap>, fuels::types::errors::Error> {
 
         log::info!("Block: {}", block_number);
