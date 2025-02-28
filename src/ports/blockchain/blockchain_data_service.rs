@@ -51,11 +51,11 @@ impl BlockchainDataService{
 
     /// Fetches block range and updates `CALC_WINDOW`
     pub async fn get_block_range(provider: &Provider) -> BlockRange {
-        let mut sync_status = SyncStatusService::get_status_entity()
+        let sync_status = SyncStatusService::get_status_entity()
             .await.unwrap().ok_or("No sync status service found.").unwrap();
 
-        let mut start_block_number =0;
-        let mut start_block_time: Option<DateTime<Utc>> = None;
+        let mut start_block_number: u64;
+        let mut start_block_time: Option<DateTime<Utc>>;
 
         let end_block_number = provider.latest_block_height().await.unwrap() as u64;
         let end_block_time = provider.latest_block_time().await.unwrap().unwrap();
@@ -68,7 +68,7 @@ impl BlockchainDataService{
             //No data in sync - cold start from config
             start_block_number = CONFIG.default.tx_log_start_block_number.clone();
             start_block_time = None;
-            if start_block_number > 0 {
+            if start_block_number.clone() > 0 {
                 start_block_time = provider
                     .block_by_height(BlockHeight::new(start_block_number.clone() as u32))
                     .await.unwrap().ok_or("Start block not found").unwrap().header.time;
@@ -129,7 +129,7 @@ impl BlockchainDataService{
         let estimated_time = calc_window.start_block_time
             + chrono::Duration::milliseconds((time_per_block * block_offset) as i64);
 
-        log::info!("Block: {} - time: {}",block_number,estimated_time);
+        //log::info!("Block: {} - time: {}",block_number,estimated_time);
 
         Ok(estimated_time)
     }

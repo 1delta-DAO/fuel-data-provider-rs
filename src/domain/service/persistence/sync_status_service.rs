@@ -5,6 +5,7 @@ use crate::ports::db::repository::SyncStatusRepository;
 
 pub struct SyncStatusService;
 
+#[allow(dead_code)]
 impl SyncStatusService{
     pub async fn get_status_entity() -> Result<Option<SyncStatusEntity>, DbErr> {
         match SyncStatusRepository::get_status().await {

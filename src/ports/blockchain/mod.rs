@@ -1,6 +1,7 @@
 pub mod tx_sync;
 mod blockchain_data_service;
+pub mod fuel_rpc_service;
+mod fuel_model;
 
 pub use tx_sync::TxSync;
-
-pub use blockchain_data_service::BlockchainDataService;
+pub use fuel_rpc_service::FuelRpcService;

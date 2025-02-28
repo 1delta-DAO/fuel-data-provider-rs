@@ -1,21 +1,10 @@
-use std::collections::{HashMap, HashSet};
-use std::net::ToSocketAddrs;
+use std::collections::HashMap;
 use std::str::FromStr;
-use fuels::prelude::*;
 use std::time::Duration;
 use chrono::{DateTime, Utc};
-use fuels::tx::TxParameters;
-use fuels::types::BlockHeight;
-use fuel_tx::Input;
-use fuels::core::codec::{ABIDecoder, DecoderConfig};
-use fuels::types::coin_type_id::CoinTypeId::UtxoId;
-use fuels::types::output::Output;
-use fuels::types::param_types::ParamType;
-use log::error;
-use num_traits::AsPrimitive;
-use sea_orm::DbErr;
+use fuels::prelude::{abigen, Bech32ContractId, Error, Execution, Provider, WalletUnlocked};
+use fuels::types::{AssetId, BlockHeight, ContractId};
 use sea_orm::prelude::Decimal;
-use serde::Deserialize;
 use uuid::Uuid;
 use crate::config::CONFIG;
 use crate::domain::entity::{TokenEntity, TokenPairsEntity, UnknownTokenEntity};
@@ -24,10 +13,8 @@ use crate::domain::entity::pair_swaps_entity::PairSwapsEntity;
 use crate::domain::service::persistence::{PairSwapsService, SyncStatusService, TokenPairsService, TokenService, UnknownTokenService};
 use crate::domain::service::persistence::mira_pools_service::MiraPoolsService;
 use crate::ports::blockchain::blockchain_data_service::BlockchainDataService;
-use crate::ports::db::database_manager::DB_MANAGER;
-use crate::ports::db::model::prelude::PairSwaps;
-use crate::ports::db::model::unknown_token;
-use crate::ports::sentio::{Pool, SubgraphQueryService};
+use crate::ports::blockchain::fuel_model::Pool;
+use crate::ports::blockchain::FuelRpcService;
 
 pub struct TxSync;
 
@@ -43,26 +30,41 @@ abigen!(
 );
 
 impl TxSync{
-    pub async fn synchronize_transactions(runner_id: u8) -> Result<()> {
-        let provider = Provider::connect(CONFIG.default.rpc_url.as_str()).await?;
+    pub async fn synchronize_transactions(runner_id: u8) -> Result<(), Error> {
+        let provider = Provider::connect(CONFIG.default.rpc_url_one.as_str()).await?;
         let mut wallet = WalletUnlocked::new_random(None);
         wallet.set_provider(provider.clone());
 
         //let mut start_block:u32 = provider.latest_block_height().await?; // get_start_block_number().await;
-        let mut start_block:u32 = get_start_block_number().await;
-        log::info!(" TXS-{}: Starting from block: {}",runner_id,start_block);
+        let start_block:u32 = get_start_block_number().await;
+        log::info!("TXS-{}: Starting from block: {}",runner_id,start_block);
         let start_block_time = get_block_time_by_block_height(&provider, start_block).await;
 
         log::info!("TXS-{}: - Start block time: {:?}",runner_id,start_block_time);
 
-        let subgraph_service = SubgraphQueryService::new();
+        let fuel_rpc_service = FuelRpcService::new().await?;
+        //let _ = fuel_rpc_service.initialize_cache(start_block).await?;
+        //let subgraph_service = SubgraphQueryService::new();
 
         loop {
             let current_block = provider.latest_block_height().await?;
 
-            let _ = subgraph_service.initialize_cache(start_block,current_block).await;
-
             log::info!("TXS-{}: - Current block: {}",runner_id,current_block);
+
+/*            for block_height in start_block..=current_block {
+                if is_block_in_calc_window(&provider, block_height as u64).await {
+                    let _ = fuel_rpc_service.initialize_cache(block_height).await?;
+                    start_block = block_height;
+                    break;
+                }
+            }*/
+
+
+            //return Ok(());
+
+            //let _ = subgraph_service.initialize_cache(start_block,current_block).await;
+
+
 
             if current_block > start_block {
 
@@ -88,7 +90,10 @@ impl TxSync{
 
                             //let swaps = subgraph_service.get_logs_by_block_number(block_height).await.unwrap_or_else(|_| Vec::new());;
 
-                            let swaps = subgraph_service.get_logs_by_block_number_from_cache(block_height);
+                            //let swaps = subgraph_service.get_logs_by_block_number_from_cache(block_height);
+                            //let swaps = fuel_rpc_service.get_logs(block_height).unwrap_or_else(|_| Vec::new());
+                        let swaps = fuel_rpc_service.get_logs(block_height).await?;
+                        log::info!("Block {} - Swaps: {}",block_height,swaps.len());
 
                             if !swaps.is_empty(){
 
@@ -97,7 +102,7 @@ impl TxSync{
 
                                 for swap in swaps {
 
-                                    let pool = Pool::from_pool_id(&swap.pool_id).unwrap();
+                                    let pool = Pool::from_swap(&swap.swap_event).unwrap();
                                     //log::info!("Pool: {:?}",pool);
                                     let token_base
                                         = get_mira_token_details_by_asset_id(&provider,&AssetId::from_str(pool.token0_address.as_str()).unwrap()).await.unwrap_or(None);
@@ -114,11 +119,11 @@ impl TxSync{
                                                 id: Uuid::new_v4(),
                                                 block_number: block_height.to_string(),
                                                 block_time: Some(block_time),
-                                                tx_id: swap.transaction_hash,
+                                                tx_id: swap.tx_id,
                                                 utxo_id: "".to_string(),
                                                 pair_id: token_pair.id,
-                                                base_amount: Decimal::from(swap.token_0in.parse::<u64>().unwrap()),
-                                                quote_amount: Decimal::from(swap.token_1out.parse::<u64>().unwrap()),
+                                                base_amount: Decimal::from(swap.swap_event.asset_0_in),
+                                                quote_amount: Decimal::from(swap.swap_event.asset_1_out),
                                                 created_at: Utc::now(),
                                                 updated_at: Utc::now(),
                                             };
@@ -142,7 +147,7 @@ impl TxSync{
                 }
 
                 if updated_pairs.len() > 0{
-                    for (id,pair) in &updated_pairs{
+                    for (_id,pair) in &updated_pairs{
                         find_or_create_mira_pool(pair.id).await;
                     }
                 }
@@ -188,12 +193,13 @@ async fn refresh_mira_pool(mira_pool: MiraPoolsEntity) -> MiraPoolsEntity{
 }
 
 async fn get_block_time_by_block_height(provider: &Provider, block_height: u32) -> fuels::prelude::Result<DateTime<Utc>> {
+    log::info!("Fetching block time by block height: {}",block_height);
     let block = provider.block_by_height(BlockHeight::new(block_height.clone())).await?;
     Ok(block.unwrap().header.time.unwrap())
 }
 
 async fn get_start_block_number() ->u32 {
-    let mut block_number = 0;
+    let mut block_number: u32;
     match SyncStatusService::get_status_entity().await {
         Ok(Some(sync_status_entity)) => {
             block_number = sync_status_entity.block_number as u32 +1
@@ -202,7 +208,7 @@ async fn get_start_block_number() ->u32 {
         Err(_) => { block_number = 0; },//TODO - Exception management
     }
     if block_number <= 1{
-        block_number = CONFIG.default.tx_log_start_block_number as u32;
+        block_number = CONFIG.default.tx_log_start_block_number.clone() as u32;
     }
     block_number
 }
@@ -221,16 +227,16 @@ async fn is_block_in_calc_window(provider: &Provider, block_number: u64) -> bool
     };
 
     // Get the calculation window in hours from the config
-    let window_range_hours = CONFIG.default.calculation_window as i64;
+    let window_range_hours = CONFIG.default.calculation_window.clone() as i64;
 
     // Calculate the cutoff time
-    let cutoff_time = Utc::now() - Duration::from_hours(window_range_hours as u64);
+    let cutoff_time = Utc::now() - Duration::from_mins(window_range_hours as u64);
 
     // Check if the block_time is within the calculation window
     block_time >= cutoff_time
 }
 
-async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>>{
+async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>, Error>{
 
     log::info!("Fetching token details by asset_id: {}",asset_id.to_string());
     let token = TokenService::find_by_address(&asset_id.to_string()).await.unwrap();
@@ -311,7 +317,7 @@ async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -
 
 }
 
-async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>>{
+async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>,Error>{
 
     log::info!("Fetching mira token details by asset_id: {}",asset_id.to_string());
     let token = TokenService::find_by_address(&asset_id.to_string()).await.unwrap();
@@ -430,7 +436,7 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
 async fn get_mira_pool_metadata(mut pool: MiraPoolsEntity) -> MiraPoolsEntity {
     match TokenPairsService::find_by_id(pool.pair_id).await {
         Ok(Some(token_pair)) => {
-            if let Ok(provider) = Provider::connect(CONFIG.default.rpc_url.as_str()).await {
+            if let Ok(provider) = Provider::connect(CONFIG.default.rpc_url_one.as_str()).await {
                 let mut wallet = WalletUnlocked::new_random(None);
                 wallet.set_provider(provider.clone());
 

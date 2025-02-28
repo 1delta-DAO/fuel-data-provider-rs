@@ -2,15 +2,21 @@
 server_port_http=8080
 data_refresh_interval=300 # seconds
 #rpc_url="https://autumn-magical-glade.fuel-mainnet.quiknode.pro/v1/graphql"
-rpc_url="https://mainnet.fuel.network"
+#https://rpc.ankr.com/premium-http/fuel/2051d179b3f725afcd27cc235efcd67a84f709abfa6aaedd44de641782be8a2a
+#https://mainnet.fuel.network
+#rpc_url_one="https://restless-evocative-paper.fuel-mainnet.quiknode.pro/168fb298bd9efd326ed37c8a899adb5f49a9a45e"
+rpc_url_one="https://restless-evocative-paper.fuel-mainnet.quiknode.pro"
+#rpc_url="https://mainnet.fuel.network"
+rpc_url_two="https://autumn-magical-glade.fuel-mainnet.quiknode.pro/v1/graphql"
+rpc_url_three="https://testnet.fuel.network/v1/graphql"
 db_url="localhost:5432/fuel_data"
 db_username="admin"
 db_password="admin"
 db_min_connections=4
 db_max_connections=8
 db_sql_logging=false
-tx_log_start_block_number=13480000 #11500000
-calculation_window=24 #h
+tx_log_start_block_number=15428540 #13480000 #11500000
+calculation_window=5 #minutes
 #0x81d5964bfbb24fd994591cc7d0a4137458d746ac0eb7ececb9a9cf2ae966d942
 #0x4ea6ccef1215d9479f1024dff70fc055ca538215d2c8c348beddffd54583d0e8
 cdi_fuel_token_gateway = "0x4ea6ccef1215d9479f1024dff70fc055ca538215d2c8c348beddffd54583d0e8"

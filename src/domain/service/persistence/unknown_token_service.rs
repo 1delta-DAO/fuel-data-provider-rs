@@ -6,6 +6,7 @@ use crate::domain::entity::UnknownTokenEntity;
 
 pub struct UnknownTokenService;
 
+#[allow(dead_code)]
 impl UnknownTokenService {
     /// Finds a token by its address
     pub async fn find_by_address(address: &str) -> Result<Option<UnknownTokenEntity>, DbErr> {
