@@ -93,10 +93,10 @@ impl TxSync{
                             //let swaps = subgraph_service.get_logs_by_block_number_from_cache(block_height);
                             //let swaps = fuel_rpc_service.get_logs(block_height).unwrap_or_else(|_| Vec::new());
                         let swaps = fuel_rpc_service.get_logs(block_height).await?;
-                        log::info!("Block {} - Swaps: {}",block_height,swaps.len());
 
                             if !swaps.is_empty(){
 
+                                log::info!("Block {} - Swaps: {}",block_height,swaps.len());
 
                                 let block_time = BlockchainDataService::get_block_time(&provider, &(block_height as u64)).await.unwrap();
 
@@ -180,7 +180,7 @@ async fn find_or_create_mira_pool(pair_id: Uuid) -> Option<MiraPoolsEntity>{
             //refresh
             Some(refresh_mira_pool(mira_pool).await)
         }
-        Err(err)=>{
+        Err(_err)=>{
             None
         }
     }
@@ -283,6 +283,7 @@ async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -
                             decimals: token_decimals as i32,
                             created_at: Utc::now(),
                             updated_at: Utc::now(),
+                            quoting: false,
                         };
                         log::info!("All data ready to create new Token entity: {:?}",token_entity);
                         Ok(Some(TokenService::create(token_entity).await.unwrap()))
@@ -298,7 +299,7 @@ async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -
                     },
                 }
             }
-            Err(e) => {
+            Err(_e) => {
                 log::info!("No asset found - ext - switch to Mira");
 
                 if let Some(token_entity) = get_mira_token_details_by_asset_id(provider,asset_id).await?{
@@ -356,6 +357,7 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
                             decimals: token_decimals as i32,
                             created_at: Utc::now(),
                             updated_at: Utc::now(),
+                            quoting: false,
                         };
                         log::info!("Mira - All data ready to create new Token entity: {:?}",token_entity);
                         Ok(Some(TokenService::create(token_entity).await.unwrap()))
@@ -390,6 +392,7 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
                                             decimals: token_decimals as i32,
                                             created_at: Utc::now(),
                                             updated_at: Utc::now(),
+                                            quoting: false,
                                         };
                                         log::info!("Fuel Gateway - All data ready to create new Token entity: {:?}",token_entity);
                                         Ok(Some(TokenService::create(token_entity).await.unwrap()))
