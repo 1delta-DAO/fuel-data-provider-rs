@@ -66,7 +66,7 @@ impl FuelRpcService {
 
     pub async fn get_logs_by_block_number(&self, provider: &Provider, block_number: u32) -> Result<Vec<Swap>, fuels::types::errors::Error> {
 
-        log::info!("Block: {}", block_number);
+        //log::info!("Block: {}", block_number);
 
         let last_block = provider.block_by_height(BlockHeight::from(block_number)).await?;
 
@@ -75,7 +75,7 @@ impl FuelRpcService {
         }
         let block = last_block.unwrap();
 
-        log::info!("block: {} : {}", block_number, block.transactions.len());
+        //log::info!("block: {} : {}", block_number, block.transactions.len());
 
 
         let mut logs = Vec::new();
@@ -134,7 +134,7 @@ impl FuelRpcService {
             }
         }
         if logs.len() > 0 {
-            log::info!("Swaps in logs: {}", logs.len());
+            log::info!("Block: {} - Swaps in logs: {}", block_number, logs.len());
         }
         Ok(logs)
     }

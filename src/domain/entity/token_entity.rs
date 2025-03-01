@@ -13,6 +13,7 @@ pub struct TokenEntity {
     pub decimals: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub quoting: bool,
 }
 
 impl Entity<Model> for TokenEntity {
@@ -22,9 +23,10 @@ impl Entity<Model> for TokenEntity {
             address: model.address.clone(),
             symbol: model.symbol.clone(),
             name: model.name.clone(),
-            decimals: model.decimals,
+            decimals: model.decimals.clone(),
             created_at: model.created_at.with_timezone(&Utc),
             updated_at: model.updated_at.with_timezone(&Utc),
+            quoting: model.quoting.clone(),
         }
     }
 
@@ -34,11 +36,12 @@ impl Entity<Model> for TokenEntity {
             address: self.address.clone(),
             symbol: self.symbol.clone(),
             name: self.name.clone(),
-            decimals: self.decimals,
+            decimals: self.decimals.clone(),
             created_at: self.created_at.into(),
             updated_at: self.updated_at.into(),
             high_risk: false, // Defaulting to `false` as this field is omitted
             no_liquidity: false, // Defaulting to `false` as this field is omitted
+            quoting: self.quoting.clone(),
         }
     }
 }
@@ -53,6 +56,7 @@ impl Default for TokenEntity {
             decimals: 0,
             created_at: Utc::now(),
             updated_at: Utc::now(),
+            quoting: false,
         }
     }
 }

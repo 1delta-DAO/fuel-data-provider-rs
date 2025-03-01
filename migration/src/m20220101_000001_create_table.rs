@@ -43,6 +43,7 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Token::UpdatedAt).timestamp_with_time_zone().not_null().default(Expr::cust("NOW()")))
                     .col(ColumnDef::new(Token::HighRisk).boolean().not_null().default(false))
                     .col(ColumnDef::new(Token::NoLiquidity).boolean().not_null().default(false))
+                    .col(ColumnDef::new(Token::Quoting).boolean().not_null().default(false))
                     .to_owned(),
             )
             .await?;
@@ -65,17 +66,45 @@ impl MigrationTrait for Migration {
         manager
             .get_connection()
             .execute_unprepared(&format!(
-                "INSERT INTO \"token\" (id, address, symbol, name, decimals) VALUES ('{}', '{}','{}','{}','{}');",
+                "INSERT INTO \"token\" (id, address, symbol, name, decimals,quoting) VALUES ('{}', '{}','{}','{}','{}','{}');",
                 token_id,
                 "33a6d90877f12c7954cca6d65587c25e9214c7bed2231c188981c7114c1bdb78",
                 "USDF",
                 "USDF",
                 9,
+                true,
             ))
             .await?;
 
+        let token_id: Uuid = Uuid::new_v4();
+        manager
+            .get_connection()
+            .execute_unprepared(&format!(
+                "INSERT INTO \"token\" (id, address, symbol, name, decimals,quoting) VALUES ('{}', '{}','{}','{}','{}','{}');",
+                token_id,
+                "286c479da40dc953bddc3bb4c453b608bba2e0ac483b077bd475174115395e6b",
+                "USDC",
+                "USD Coin",
+                9,
+                true,
+            ))
+            .await?;
 
-        // Create table `token`
+        let token_id: Uuid = Uuid::new_v4();
+        manager
+            .get_connection()
+            .execute_unprepared(&format!(
+                "INSERT INTO \"token\" (id, address, symbol, name, decimals,quoting) VALUES ('{}', '{}','{}','{}','{}','{}');",
+                token_id,
+                "a0265fb5c32f6e8db3197af3c7eb05c48ae373605b8165b6f4a51c5b0ba4812e",
+                "USDT",
+                "Teher USD",
+                6,
+                true,
+            ))
+            .await?;
+
+        // Create table `unknown token`
         manager
             .create_table(
                 Table::create()
@@ -190,6 +219,7 @@ pub enum Token {
     UpdatedAt,
     HighRisk,
     NoLiquidity,
+    Quoting,
 }
 
 #[derive(Iden)]

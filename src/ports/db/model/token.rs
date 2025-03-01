@@ -17,6 +17,7 @@ pub struct Model {
     pub updated_at: DateTimeWithTimeZone,
     pub high_risk: bool,
     pub no_liquidity: bool,
+    pub quoting: bool,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
