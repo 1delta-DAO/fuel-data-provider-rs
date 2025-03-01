@@ -12,15 +12,34 @@ pub struct Model {
     #[sea_orm(unique)]
     pub symbol: String,
     pub name: String,
+    pub price: Decimal,
+    pub volume24: Decimal,
     pub decimals: i32,
-    pub created_at: DateTimeWithTimeZone,
-    pub updated_at: DateTimeWithTimeZone,
     pub high_risk: bool,
     pub no_liquidity: bool,
     pub quoting: bool,
+    pub created_at: DateTimeWithTimeZone,
+    pub updated_at: DateTimeWithTimeZone,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub enum Relation {
+    #[sea_orm(has_many = "super::price_data::Entity")]
+    PriceData,
+    #[sea_orm(has_many = "super::volume_data::Entity")]
+    VolumeData,
+}
+
+impl Related<super::price_data::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::PriceData.def()
+    }
+}
+
+impl Related<super::volume_data::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::VolumeData.def()
+    }
+}
 
 impl ActiveModelBehavior for ActiveModel {}

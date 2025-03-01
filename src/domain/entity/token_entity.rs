@@ -1,6 +1,8 @@
 use crate::domain::entity::entity::Entity;
 use crate::ports::db::model::token::Model;
 use chrono::{DateTime, Utc};
+use num_traits::{FromPrimitive, ToPrimitive};
+use sea_orm::prelude::Decimal;
 use serde::Serialize;
 use uuid::Uuid;
 
@@ -10,6 +12,8 @@ pub struct TokenEntity {
     pub address: String,
     pub symbol: String,
     pub name: String,
+    pub price: u64,
+    pub volume_24: u64,
     pub decimals: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -23,6 +27,8 @@ impl Entity<Model> for TokenEntity {
             address: model.address.clone(),
             symbol: model.symbol.clone(),
             name: model.name.clone(),
+            price: model.price.to_u64().unwrap(),
+            volume_24: model.price.to_u64().unwrap(),
             decimals: model.decimals.clone(),
             created_at: model.created_at.with_timezone(&Utc),
             updated_at: model.updated_at.with_timezone(&Utc),
@@ -36,6 +42,8 @@ impl Entity<Model> for TokenEntity {
             address: self.address.clone(),
             symbol: self.symbol.clone(),
             name: self.name.clone(),
+            price: Decimal::from_u64(self.price.clone()).unwrap_or(Decimal::ZERO),
+            volume24: Decimal::from_u64(self.volume_24.clone()).unwrap_or(Decimal::ZERO),
             decimals: self.decimals.clone(),
             created_at: self.created_at.into(),
             updated_at: self.updated_at.into(),
@@ -53,6 +61,8 @@ impl Default for TokenEntity {
             address: String::new(),
             symbol: String::new(),
             name: String::new(),
+            price: 0,
+            volume_24: 0,
             decimals: 0,
             created_at: Utc::now(),
             updated_at: Utc::now(),

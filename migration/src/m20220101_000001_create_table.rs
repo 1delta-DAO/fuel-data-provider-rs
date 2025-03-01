@@ -22,6 +22,8 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(SyncStatus::Id).uuid().not_null().primary_key().default(Expr::cust("uuid_generate_v4()")))
                     .col(ColumnDef::new(SyncStatus::BlockNumber).unsigned().not_null().default(0))
                     .col(ColumnDef::new(SyncStatus::BlockTime).timestamp_with_time_zone())
+                    .col(ColumnDef::new(SyncStatus::FirstCalculationPoint).timestamp_with_time_zone().not_null().default(Expr::cust("NOW()")))
+                    .col(ColumnDef::new(SyncStatus::CalculationDataReady).boolean().not_null().default(false))
                     .col(ColumnDef::new(SyncStatus::CreatedAt).timestamp_with_time_zone().not_null().default(Expr::cust("NOW()")))
                     .col(ColumnDef::new(SyncStatus::UpdatedAt).timestamp_with_time_zone().not_null().default(Expr::cust("NOW()")))
                     .to_owned(),
@@ -38,12 +40,14 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Token::Address).string().not_null().unique_key())
                     .col(ColumnDef::new(Token::Symbol).string().not_null().unique_key())
                     .col(ColumnDef::new(Token::Name).string().not_null())
+                    .col(ColumnDef::new(Token::Price).decimal().not_null().default(0))
+                    .col(ColumnDef::new(Token::Volume24).decimal().not_null().default(0))
                     .col(ColumnDef::new(Token::Decimals).unsigned().not_null())
-                    .col(ColumnDef::new(Token::CreatedAt).timestamp_with_time_zone().not_null().default(Expr::cust("NOW()")))
-                    .col(ColumnDef::new(Token::UpdatedAt).timestamp_with_time_zone().not_null().default(Expr::cust("NOW()")))
                     .col(ColumnDef::new(Token::HighRisk).boolean().not_null().default(false))
                     .col(ColumnDef::new(Token::NoLiquidity).boolean().not_null().default(false))
                     .col(ColumnDef::new(Token::Quoting).boolean().not_null().default(false))
+                    .col(ColumnDef::new(Token::CreatedAt).timestamp_with_time_zone().not_null().default(Expr::cust("NOW()")))
+                    .col(ColumnDef::new(Token::UpdatedAt).timestamp_with_time_zone().not_null().default(Expr::cust("NOW()")))
                     .to_owned(),
             )
             .await?;
@@ -191,17 +195,57 @@ impl MigrationTrait for Migration {
                     .to_owned(),
             )
             .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(VolumeData::Table)
+                    .if_not_exists()
+                    .col(ColumnDef::new(VolumeData::Timestamp).timestamp_with_time_zone().not_null().primary_key().default(Expr::cust("NOW()")))
+                    .col(ColumnDef::new(VolumeData::TokenId).uuid().not_null())
+                    .col(ColumnDef::new(VolumeData::Volume).decimal().not_null().default(0))
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(VolumeData::Table, VolumeData::TokenId)
+                            .to(Token::Table, Token::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(PriceData::Table)
+                    .if_not_exists()
+                    .col(ColumnDef::new(PriceData::Id).uuid().not_null().primary_key().default(Expr::cust("uuid_generate_v4()")))
+                    .col(ColumnDef::new(PriceData::TokenId).uuid().not_null())
+                    .col(ColumnDef::new(PriceData::Price).decimal().not_null().default(0))
+                    .col(ColumnDef::new(PriceData::Timestamp).timestamp_with_time_zone().not_null().default(Expr::cust("NOW()")))
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(PriceData::Table, PriceData::TokenId)
+                            .to(Token::Table, Token::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
         Ok(())
 
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        manager.drop_table(Table::drop().table(SyncStatus::Table).to_owned()).await?;
-        manager.drop_table(Table::drop().table(PairSwaps::Table).to_owned()).await?;
-        manager.drop_table(Table::drop().table(MiraPools::Table).to_owned()).await?;
-        manager.drop_table(Table::drop().table(TokenPairs::Table).to_owned()).await?;
-        manager.drop_table(Table::drop().table(Token::Table).to_owned()).await?;
-        manager.drop_table(Table::drop().table(UnknownToken::Table).to_owned()).await?;
+        manager.drop_table(Table::drop().table(SyncStatus::Table).if_exists().to_owned()).await?;
+        manager.drop_table(Table::drop().table(PairSwaps::Table).if_exists().to_owned()).await?;
+        manager.drop_table(Table::drop().table(MiraPools::Table).if_exists().to_owned()).await?;
+        manager.drop_table(Table::drop().table(TokenPairs::Table).if_exists().to_owned()).await?;
+        manager.drop_table(Table::drop().table(Token::Table).if_exists().to_owned()).await?;
+        manager.drop_table(Table::drop().table(UnknownToken::Table).if_exists().to_owned()).await?;
+        manager.drop_table(Table::drop().table(VolumeData::Table).if_exists().to_owned()).await?;
+        manager.drop_table(Table::drop().table(PriceData::Table).if_exists().to_owned()).await?;
         Ok(())
     }
 }
@@ -214,6 +258,8 @@ pub enum Token {
     Address,
     Symbol,
     Name,
+    Price,
+    Volume24,
     Decimals,
     CreatedAt,
     UpdatedAt,
@@ -277,6 +323,25 @@ pub enum SyncStatus{
     Id,
     BlockNumber,
     BlockTime,
+    FirstCalculationPoint,
+    CalculationDataReady,
     CreatedAt,
     UpdatedAt,
+}
+
+#[derive(Iden)]
+pub enum VolumeData{
+    Table,
+    Timestamp,
+    TokenId,
+    Volume,
+}
+
+#[derive(Iden)]
+pub enum PriceData{
+    Table,
+    Id,
+    TokenId,
+    Price,
+    Timestamp,
 }
