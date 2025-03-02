@@ -4,7 +4,9 @@ pub mod prelude;
 
 pub mod mira_pools;
 pub mod pair_swaps;
+pub mod price_data;
 pub mod sync_status;
 pub mod token;
 pub mod token_pairs;
 pub mod unknown_token;
+pub mod volume_data;

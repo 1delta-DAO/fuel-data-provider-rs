@@ -20,7 +20,7 @@ impl Entity<Model> for MiraPoolsEntity {
         Self {
             id: model.id,
             pair_id: model.pair_id,
-            swaps: model.swaps,
+            swaps: model.swaps.clone(),
             reserve_base: model.reserve_base,
             reserve_quote: model.reserve_quote,
             created_at: model.created_at.with_timezone(&Utc),
@@ -32,7 +32,7 @@ impl Entity<Model> for MiraPoolsEntity {
         Model {
             id: self.id,
             pair_id: self.pair_id,
-            swaps: self.swaps,
+            swaps: self.swaps.clone(),
             reserve_base: self.reserve_base,
             reserve_quote: self.reserve_quote,
             created_at: self.created_at.into(),

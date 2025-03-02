@@ -200,7 +200,7 @@ async fn get_block_time_by_block_height(provider: &Provider, block_height: u32) 
 
 async fn get_start_block_number() ->u32 {
     let mut block_number: u32;
-    match SyncStatusService::get_status_entity().await {
+    match SyncStatusService::get_status().await {
         Ok(Some(sync_status_entity)) => {
             block_number = sync_status_entity.block_number as u32 +1
         },
@@ -280,6 +280,8 @@ async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -
                             address: asset_id.to_string(),
                             symbol: token_symbol,
                             name: token_name,
+                            price: 0,
+                            volume_24: 0,
                             decimals: token_decimals as i32,
                             created_at: Utc::now(),
                             updated_at: Utc::now(),
@@ -354,6 +356,8 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
                             address: asset_id.to_string(),
                             symbol: token_symbol,
                             name: token_name,
+                            price: 0,
+                            volume_24: 0,
                             decimals: token_decimals as i32,
                             created_at: Utc::now(),
                             updated_at: Utc::now(),
@@ -389,6 +393,8 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
                                             address: asset_id.to_string(),
                                             symbol: token_symbol,
                                             name: token_name,
+                                            price: 0,
+                                            volume_24: 0,
                                             decimals: token_decimals as i32,
                                             created_at: Utc::now(),
                                             updated_at: Utc::now(),
@@ -408,7 +414,7 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
                                     }
                                 }
                             },
-                            Err(e)=>{
+                            Err(_e)=>{
                                 log::info!("Fuel - No asset found - ext");
                                 let unknown_token = UnknownTokenEntity{
                                     id: Uuid::new_v4(),
@@ -421,7 +427,7 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
                         }
                     }
             }
-            Err(e) => {
+            Err(_e) => {
                 log::info!("Mira - No asset found - ext");
                 let unknown_token = UnknownTokenEntity{
                     id: Uuid::new_v4(),

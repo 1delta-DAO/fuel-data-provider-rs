@@ -31,6 +31,12 @@ impl TokenService {
         }
     }
 
+    /// Finds multiple tokens by a list of addresses
+    pub async fn find_by_addresses(addresses: Vec<String>) -> Result<Vec<TokenEntity>, DbErr> {
+        let models = TokenRepository::find_by_addresses(addresses).await?;
+        Ok(models.into_iter().map(|model: token::Model| TokenEntity::from_model(&model)).collect())
+    }
+
     /// Creates a new token
     pub async fn create(token_entity: TokenEntity) -> Result<TokenEntity, DbErr> {
         let model = token_entity.to_model();

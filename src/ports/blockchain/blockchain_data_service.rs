@@ -51,7 +51,7 @@ impl BlockchainDataService{
 
     /// Fetches block range and updates `CALC_WINDOW`
     pub async fn get_block_range(provider: &Provider) -> BlockRange {
-        let sync_status = SyncStatusService::get_status_entity()
+        let sync_status = SyncStatusService::get_status()
             .await.unwrap().ok_or("No sync status service found.").unwrap();
 
         let mut start_block_number: u64;

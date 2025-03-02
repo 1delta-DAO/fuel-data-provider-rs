@@ -1,6 +1,37 @@
 # FUEL DATA PROVIDER
 
 
+### Endpoints
+
+
+#### Assets
+
+GET: http://localhost:8080/status/
+
+GET: http://localhost:8080/tokens/
+
+GET: http://localhost:8080/tokens/by-time/?start=2024-02-26T12:00:00&end=2025-03-26T14:00:00
+
+POST: 
+```shell
+curl -X POST "http://localhost:8080/tokens/by-address" \
+     -H "Content-Type: application/json" \
+     -d '{
+           "addresses": [
+             "f8f8b6283d7fa5b672b530cbb84fcccb4ff8dc40f8176ef4544ddb1f1952ad07",
+             "33a6d90877f12c7954cca6d65587c25e9214c7bed2231c188981c7114c1bdb78"
+           ]
+         }'
+```
+
+#### Trending
+
+GET: http://localhost:8080/tokens/top-gainers?count=5
+
+GET: http://localhost:8080/tokens/top-losers?count=5
+
+GET: http://localhost:8080/tokens/top-volume?count=5
+
 
 ### SeaORM
 

@@ -121,7 +121,7 @@ pub static CONFIG: Lazy<Arc<AppConfig>> = Lazy::new(|| {
 });
 
 pub fn load_config_from_env_or_file() -> Result<AppConfig, Box<dyn Error>> {
-    let mut settings = Config::builder()
+    let settings = Config::builder()
         .add_source(File::with_name("resources/config.toml").required(false))
         .build()?;
 

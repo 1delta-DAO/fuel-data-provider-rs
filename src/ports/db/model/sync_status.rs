@@ -9,6 +9,8 @@ pub struct Model {
     pub id: Uuid,
     pub block_number: i32,
     pub block_time: Option<DateTimeWithTimeZone>,
+    pub first_calculation_point: DateTimeWithTimeZone,
+    pub calculation_data_ready: bool,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
 }

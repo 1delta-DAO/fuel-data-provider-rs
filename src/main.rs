@@ -34,7 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let server_handle = tokio::spawn(async {
         let routes = api::rest::routes::routes();
         log::info!("Starting HTTP server on port 3030...");
-        warp::serve(routes).run(([0, 0, 0, 0], 3030)).await;
+        warp::serve(routes).run(([0, 0, 0, 0], CONFIG.default.server_port_http.clone())).await;
     });
 
 

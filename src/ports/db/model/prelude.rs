@@ -2,7 +2,9 @@
 
 pub use super::mira_pools::Entity as MiraPools;
 pub use super::pair_swaps::Entity as PairSwaps;
+pub use super::price_data::Entity as PriceData;
 pub use super::sync_status::Entity as SyncStatus;
 pub use super::token::Entity as Token;
 pub use super::token_pairs::Entity as TokenPairs;
 pub use super::unknown_token::Entity as UnknownToken;
+pub use super::volume_data::Entity as VolumeData;
