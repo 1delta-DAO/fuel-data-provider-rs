@@ -83,15 +83,6 @@ impl TxSync{
                             continue;
                         }
 
-                        //if let Some(block) = block {
-
-
-
-
-                            //let swaps = subgraph_service.get_logs_by_block_number(block_height).await.unwrap_or_else(|_| Vec::new());;
-
-                            //let swaps = subgraph_service.get_logs_by_block_number_from_cache(block_height);
-                            //let swaps = fuel_rpc_service.get_logs(block_height).unwrap_or_else(|_| Vec::new());
                         let swaps = fuel_rpc_service.get_logs(block_height).await?;
 
                             if !swaps.is_empty(){
