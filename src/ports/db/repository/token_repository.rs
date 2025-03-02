@@ -3,7 +3,7 @@ use crate::ports::db::model::token::Model;
 use crate::ports::db::repository::CrudRepository;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use sea_orm::{ColumnTrait, QueryFilter, DbErr, EntityTrait};
+use sea_orm::{ColumnTrait, QueryFilter, DbErr, EntityTrait, Condition};
 
 pub struct TokenRepository;
 
@@ -24,4 +24,22 @@ impl TokenRepository {
             .all(db)
             .await
     }
+
+    /// Finds tokens by a list of addresses
+    pub async fn find_by_addresses(addresses: Vec<String>) -> Result<Vec<Model>, DbErr> {
+        if addresses.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let db = &crate::ports::db::database_manager::DB_MANAGER.get_connection().await.unwrap();
+
+        let condition = addresses.iter()
+            .fold(Condition::any(), |c, addr| c.add(token::Column::Address.eq(addr.clone())));
+
+        token::Entity::find()
+            .filter(condition)
+            .all(db)
+            .await
+    }
+
 }

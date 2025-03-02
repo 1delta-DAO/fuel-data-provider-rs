@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::convert::Infallible;
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use warp::{Rejection, Reply};
@@ -82,10 +83,52 @@ pub async fn get_tokens_by_time_range(params: QueryParams) -> Result<impl Reply,
     }
 }
 
+pub async fn get_tokens_by_address(params: AddressQueryParams) -> Result<impl Reply, Infallible> {
+    // Ensure there are addresses provided
+    if params.addresses.is_empty() {
+        return Ok(warp::reply::with_status(
+            warp::reply::json(&"Address list cannot be empty"),
+            StatusCode::BAD_REQUEST,
+        ));
+    }
+
+    // Filter out empty or invalid addresses
+    let addresses: HashSet<String> = params.addresses.into_iter()
+        .filter(|addr| !addr.trim().is_empty())
+        .collect();
+
+    if addresses.is_empty() {
+        return Ok(warp::reply::with_status(
+            warp::reply::json(&"All provided addresses were empty or invalid"),
+            StatusCode::BAD_REQUEST,
+        ));
+    }
+
+    // Query the database for the valid addresses
+    match TokenService::find_by_addresses(addresses.into_iter().collect()).await {
+        Ok(tokens) => Ok(warp::reply::with_status(
+            warp::reply::json(&tokens),
+            StatusCode::OK,
+        )),
+        Err(err) => {
+            log::error!("Error fetching tokens by addresses: {:?}", err);
+            Ok(warp::reply::with_status(
+                warp::reply::json(&"Internal server error"),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
+        }
+    }
+}
+
 #[derive(Debug, serde::Deserialize)]
 pub struct QueryParams {
     start: String,
     end: String,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct AddressQueryParams {
+    addresses: Vec<String>,
 }
 
 fn parse_datetime(datetime_str: &str) -> Option<DateTime<Utc>> {
