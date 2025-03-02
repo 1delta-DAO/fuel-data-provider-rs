@@ -4,11 +4,13 @@
 ### Endpoints
 
 
+#### Assets
+
 GET: http://localhost:8080/status/
 
 GET: http://localhost:8080/tokens/
 
-GET: http://localhost:8080/tokens/by-time/?start=2024-02-26T12:00:00&end=2024-02-26T14:00:00
+GET: http://localhost:8080/tokens/by-time/?start=2024-02-26T12:00:00&end=2025-03-26T14:00:00
 
 POST: 
 ```shell
@@ -21,6 +23,15 @@ curl -X POST "http://localhost:8080/tokens/by-address" \
            ]
          }'
 ```
+
+#### Trending
+
+GET: http://localhost:8080/tokens/top-gainers?count=5
+
+GET: http://localhost:8080/tokens/top-losers?count=5
+
+GET: http://localhost:8080/tokens/top-volume?count=5
+
 
 ### SeaORM
 
