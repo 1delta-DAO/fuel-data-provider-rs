@@ -60,4 +60,15 @@ where
     {
         E::find().filter(column.eq(value.into())).one(&DB_MANAGER.get_connection().await.unwrap()).await
     }
+
+    async fn find_by_column_many<C, V>(column: C, value: V) -> Result<Vec<E::Model>, sea_orm::DbErr>
+    where
+        C: ColumnTrait + 'static,
+        V: Into<sea_orm::Value> + Send,
+    {
+        E::find()
+            .filter(column.eq(value.into()))
+            .all(&DB_MANAGER.get_connection().await.unwrap())
+            .await
+    }
 }
