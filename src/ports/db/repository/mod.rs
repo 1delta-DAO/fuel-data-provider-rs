@@ -6,6 +6,8 @@ pub mod token_pairs_repository;
 pub mod mira_pools_repository;
 mod pair_swaps_repository;
 mod unknown_token_repository;
+mod volume_data_repository;
+mod price_data_repository;
 
 pub use token_pairs_repository::TokenPairsRepository;
 

@@ -1,6 +1,6 @@
 use std::convert::Infallible;
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
-use warp::{Filter, Rejection, Reply};
+use warp::{Rejection, Reply};
 use crate::domain::service::persistence::TokenService;
 
 /*

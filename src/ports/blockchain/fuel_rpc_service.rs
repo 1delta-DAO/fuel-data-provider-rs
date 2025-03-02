@@ -118,10 +118,10 @@ impl FuelRpcService {
                             }
                         }
                     },
-                    TransactionType::Mint(mint_tx) => {
+                    TransactionType::Mint(_mint_tx) => {
                         //log::info!("Type: Mint");
                     },
-                    TransactionType::Create(create_tx) => {
+                    TransactionType::Create(_create_tx) => {
                       //log::info!("Type: Create");
                     },
                     _ => {

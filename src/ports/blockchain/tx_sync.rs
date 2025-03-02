@@ -414,7 +414,7 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
                                     }
                                 }
                             },
-                            Err(e)=>{
+                            Err(_e)=>{
                                 log::info!("Fuel - No asset found - ext");
                                 let unknown_token = UnknownTokenEntity{
                                     id: Uuid::new_v4(),
@@ -427,7 +427,7 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
                         }
                     }
             }
-            Err(e) => {
+            Err(_e) => {
                 log::info!("Mira - No asset found - ext");
                 let unknown_token = UnknownTokenEntity{
                     id: Uuid::new_v4(),
