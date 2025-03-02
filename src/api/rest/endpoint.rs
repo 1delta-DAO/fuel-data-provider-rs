@@ -1,7 +1,8 @@
 use std::convert::Infallible;
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use warp::{Rejection, Reply};
-use crate::domain::service::persistence::TokenService;
+use warp::http::StatusCode;
+use crate::domain::service::persistence::{SyncStatusService, TokenService};
 
 /*
 `getNewTokens(start:number, end:number)`
@@ -20,6 +21,26 @@ use crate::domain::service::persistence::TokenService;
     - Top volume
  */
 
+pub async fn get_status() -> Result<impl Reply, Infallible> {
+    match SyncStatusService::get_status().await {
+        Ok(Some(sync_status)) => Ok(warp::reply::with_status(
+            warp::reply::json(&sync_status),
+            StatusCode::OK,
+        )),
+        Ok(None) => Ok(warp::reply::with_status(
+            warp::reply::json(&"No sync status found"),
+            StatusCode::NOT_FOUND,
+        )),
+        Err(err) => {
+            log::error!("Error fetching sync status: {:?}", err);
+            Ok(warp::reply::with_status(
+                warp::reply::json(&"Internal server error"),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
+        }
+    }
+}
+
 pub async fn get_tokens() -> Result<impl warp::Reply, Infallible> {
 
     match TokenService::find_all_tokens().await {
@@ -31,7 +52,7 @@ pub async fn get_tokens() -> Result<impl warp::Reply, Infallible> {
             log::error!("Database error: {:?}", err);
             Ok(warp::reply::with_status(
                 warp::reply::json(&"Internal server error"),
-                warp::http::StatusCode::from_u16(500).unwrap(),
+                warp::http::StatusCode::OK,
             ))
         }
     }

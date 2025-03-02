@@ -7,7 +7,7 @@ pub struct SyncStatusService;
 
 #[allow(dead_code)]
 impl SyncStatusService{
-    pub async fn get_status_entity() -> Result<Option<SyncStatusEntity>, DbErr> {
+    pub async fn get_status() -> Result<Option<SyncStatusEntity>, DbErr> {
         match SyncStatusRepository::get_status().await {
             Ok(Some(model)) => Ok(Some(SyncStatusEntity::from_model(&model))),
             Ok(None) => Ok(None),

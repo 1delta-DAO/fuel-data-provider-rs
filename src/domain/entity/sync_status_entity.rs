@@ -1,8 +1,10 @@
 use crate::domain::entity::entity::Entity;
 use crate::ports::db::model::sync_status::Model;
 use chrono::{DateTime, Utc};
+use serde::Serialize;
 use uuid::Uuid;
 
+#[derive(Debug,Serialize)]
 pub struct SyncStatusEntity {
     pub id: Uuid,
     pub block_number: i32,

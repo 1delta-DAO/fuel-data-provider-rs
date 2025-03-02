@@ -200,7 +200,7 @@ async fn get_block_time_by_block_height(provider: &Provider, block_height: u32) 
 
 async fn get_start_block_number() ->u32 {
     let mut block_number: u32;
-    match SyncStatusService::get_status_entity().await {
+    match SyncStatusService::get_status().await {
         Ok(Some(sync_status_entity)) => {
             block_number = sync_status_entity.block_number as u32 +1
         },
