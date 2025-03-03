@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use sea_orm::prelude::Decimal;
 use uuid::Uuid;
 
-#[derive(Eq, Hash, PartialEq)]
+#[derive(Debug,Eq, Hash, PartialEq, Clone)]
 pub struct PairSwapsEntity {
     pub id: Uuid,
     pub block_number: String,

@@ -12,3 +12,5 @@ pub use token_service::TokenService;
 pub use token_pairs_service::TokenPairsService;
 pub use pair_swaps_service::PairSwapsService;
 pub use unknown_token_service::UnknownTokenService;
+pub use price_data_service::PriceDataService;
+pub use volume_data_service::VolumeDataService;

@@ -4,13 +4,15 @@ use std::time::Duration;
 use chrono::{DateTime, Utc};
 use fuels::prelude::{abigen, Bech32ContractId, Error, Execution, Provider, WalletUnlocked};
 use fuels::types::{AssetId, BlockHeight, ContractId};
+use num_traits::ToPrimitive;
+use sea_orm::DbErr;
 use sea_orm::prelude::Decimal;
 use uuid::Uuid;
 use crate::config::CONFIG;
-use crate::domain::entity::{TokenEntity, TokenPairsEntity, UnknownTokenEntity};
+use crate::domain::entity::{TokenEntity, TokenPairsEntity, UnknownTokenEntity, VolumeDataEntity};
 use crate::domain::entity::mira_pools_entity::MiraPoolsEntity;
 use crate::domain::entity::pair_swaps_entity::PairSwapsEntity;
-use crate::domain::service::persistence::{PairSwapsService, SyncStatusService, TokenPairsService, TokenService, UnknownTokenService};
+use crate::domain::service::persistence::{PairSwapsService, SyncStatusService, TokenPairsService, TokenService, UnknownTokenService, VolumeDataService};
 use crate::domain::service::persistence::mira_pools_service::MiraPoolsService;
 use crate::ports::blockchain::blockchain_data_service::BlockchainDataService;
 use crate::ports::blockchain::fuel_model::Pool;
@@ -118,6 +120,7 @@ impl TxSync{
                                                 created_at: Utc::now(),
                                                 updated_at: Utc::now(),
                                             };
+                                            add_volume(token_base,token_quote,&pair_swap).await.unwrap();
                                             pair_swaps_vec.push(pair_swap);
 
                                         }
@@ -150,6 +153,57 @@ impl TxSync{
 
 
 }
+
+pub async fn add_volume(
+    token_base: &TokenEntity,
+    token_quote: &TokenEntity,
+    pair_swap: &PairSwapsEntity,
+) -> Result<(), DbErr> {
+    let timestamp = match pair_swap.block_time {
+        Some(time) => time,
+        None => {
+            log::error!("Missing block_time for PairSwapsEntity: {:?}", pair_swap);
+            return Err(DbErr::Custom("Missing block_time".to_string()));
+        }
+    };
+
+    let volume_base = VolumeDataEntity {
+        timestamp,
+        token_id: token_base.id,
+        volume: pair_swap.base_amount.to_u64().unwrap_or_else(|| {
+            log::error!("Failed to convert base_amount for token: {:?}", token_base);
+            0
+        }),
+    };
+
+    if let Err(err) = VolumeDataService::create_or_update(volume_base).await {
+        log::error!(
+            "Failed to update volume for base token {}: {:?}",
+            token_base.id, err
+        );
+        return Err(err);
+    }
+
+    let volume_quote = VolumeDataEntity {
+        timestamp,
+        token_id: token_quote.id,
+        volume: pair_swap.quote_amount.to_u64().unwrap_or_else(|| {
+            log::error!("Failed to convert quote_amount for token: {:?}", token_quote);
+            0
+        }),
+    };
+
+    if let Err(err) = VolumeDataService::create_or_update(volume_quote).await {
+        log::error!(
+            "Failed to update volume for quote token {}: {:?}",
+            token_quote.id, err
+        );
+        return Err(err);
+    }
+
+    Ok(())
+}
+
 async fn find_or_create_pair(base_token: &TokenEntity, quote_token: &TokenEntity) -> Option<TokenPairsEntity> {
     match TokenPairsService::find_or_create_pair(&base_token, &quote_token).await{
         Ok(token_pair) =>{
