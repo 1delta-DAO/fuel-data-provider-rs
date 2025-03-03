@@ -6,7 +6,7 @@ use sea_orm::prelude::Decimal;
 use serde::Serialize;
 use uuid::Uuid;
 
-#[derive(Debug,Serialize)]
+#[derive(Debug,Serialize, Clone)]
 pub struct TokenEntity {
     pub id: Uuid,
     pub address: String,

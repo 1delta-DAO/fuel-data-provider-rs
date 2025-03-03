@@ -16,3 +16,5 @@ pub use token_repository::TokenRepository;
 pub use unknown_token_repository::UnknownTokenRepository;
 pub use mira_pools_repository::MiraPoolsRepository;
 pub use pair_swaps_repository::PairSwapsRepository;
+pub use price_data_repository::PriceDataRepository;
+pub use volume_data_repository::VolumeDataRepository;

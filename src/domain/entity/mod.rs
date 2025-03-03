@@ -10,4 +10,7 @@ pub mod unknown_token_entity;
 mod volume_data_entity;
 mod price_data_entity;
 
+
+pub use price_data_entity::PriceDataEntity;
+pub use volume_data_entity::VolumeDataEntity;
 pub use unknown_token_entity::UnknownTokenEntity;
