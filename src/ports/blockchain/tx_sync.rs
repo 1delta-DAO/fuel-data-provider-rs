@@ -9,14 +9,15 @@ use sea_orm::DbErr;
 use sea_orm::prelude::Decimal;
 use uuid::Uuid;
 use crate::config::CONFIG;
-use crate::domain::entity::{TokenEntity, TokenPairsEntity, UnknownTokenEntity, VolumeDataEntity};
+use crate::domain::entity::{PriceDataEntity, TokenEntity, TokenPairsEntity, UnknownTokenEntity, VolumeDataEntity};
 use crate::domain::entity::mira_pools_entity::MiraPoolsEntity;
 use crate::domain::entity::pair_swaps_entity::PairSwapsEntity;
-use crate::domain::service::persistence::{PairSwapsService, SyncStatusService, TokenPairsService, TokenService, UnknownTokenService, VolumeDataService};
+use crate::domain::service::persistence::{PairSwapsService, PriceDataService, SyncStatusService, TokenPairsService, TokenService, UnknownTokenService, VolumeDataService};
 use crate::domain::service::persistence::mira_pools_service::MiraPoolsService;
 use crate::ports::blockchain::blockchain_data_service::BlockchainDataService;
 use crate::ports::blockchain::fuel_model::Pool;
 use crate::ports::blockchain::FuelRpcService;
+use crate::ports::db::model::token::Column::Price;
 
 pub struct TxSync;
 
@@ -120,7 +121,16 @@ impl TxSync{
                                                 created_at: Utc::now(),
                                                 updated_at: Utc::now(),
                                             };
-                                            add_volume(token_base,token_quote,&pair_swap).await.unwrap();
+
+                                            if swap.swap_event.asset_0_in !=0
+                                            {
+                                                add_volume(token_base,token_quote,&pair_swap).await.unwrap();
+                                                add_price(token_base,token_quote,&pair_swap).await.unwrap();
+                                            }
+                                            else{
+                                                log::info!("Amount: {},{} : {},{}",swap.swap_event.asset_0_in,swap.swap_event.asset_0_in,swap.swap_event.asset_1_out,swap.swap_event.asset_1_out);
+                                            }
+
                                             pair_swaps_vec.push(pair_swap);
 
                                         }
@@ -201,6 +211,63 @@ pub async fn add_volume(
         return Err(err);
     }
 
+    Ok(())
+}
+
+pub async fn add_price(
+    token_base: &TokenEntity,
+    token_quote: &TokenEntity,
+    pair_swap: &PairSwapsEntity,
+) -> Result<(), DbErr> {
+    let timestamp = match pair_swap.block_time {
+        Some(time) => time,
+        None => {
+            log::error!("Missing block_time for PairSwapsEntity: {:?}", pair_swap);
+            return Err(DbErr::Custom("Missing block_time".to_string()));
+        }
+    };
+
+    match (token_base.quoting, token_quote.quoting) {
+        (true, false) => {
+            // token_base is quoting, calculate price of token_quote
+            let price = pair_swap.base_amount / pair_swap.quote_amount;
+            update_token_price(token_base, price, timestamp).await?;
+        }
+        (false, true) => {
+            // token_quote is quoting, calculate price of token_base
+            let price = pair_swap.quote_amount / pair_swap.base_amount;
+            update_token_price(token_quote, price, timestamp).await?;
+        }
+        (true, true) => {
+            // Both tokens are quoting, assign reciprocal prices
+            let base_price = pair_swap.base_amount / pair_swap.quote_amount;
+            let quote_price = pair_swap.quote_amount / pair_swap.base_amount;
+            update_token_price(token_base, base_price, timestamp).await?;
+            update_token_price(token_quote, quote_price, timestamp).await?;
+        }
+        (false, false) => {
+            log::warn!(
+                "Skipping price update: neither {} nor {} are quoting tokens.",
+                token_base.symbol,
+                token_quote.symbol
+            );
+        }
+    }
+    Ok(())
+}
+
+async fn update_token_price(token: &TokenEntity, new_price: Decimal, timestamp: DateTime<Utc>) -> Result<(), DbErr> {
+    let mut token_update = token.clone();
+    token_update.updated_at = Utc::now();
+    token_update.price = new_price.to_u64().unwrap();
+    TokenService::update(token_update).await?;
+    let price_data = PriceDataEntity {
+        id: Uuid::new_v4(),
+        token_id: token.id,
+        price: new_price.to_u64().unwrap(),
+        timestamp,
+    };
+    PriceDataService::create(price_data).await?;
     Ok(())
 }
 

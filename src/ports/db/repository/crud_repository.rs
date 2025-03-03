@@ -45,7 +45,6 @@ where
     }
 
     async fn update(active_model: E::ActiveModel) -> Result<E::Model, sea_orm::DbErr> {
-        log::info!("UPDATE {:?}",active_model);
         active_model.update(&DB_MANAGER.get_connection().await.unwrap()).await
     }
 
