@@ -1,6 +1,7 @@
 use crate::domain::entity::entity::Entity;
 use crate::ports::db::model::pair_swaps::Model;
 use chrono::{DateTime, Utc};
+use num_traits::{FromPrimitive, ToPrimitive};
 use sea_orm::prelude::Decimal;
 use uuid::Uuid;
 
@@ -12,8 +13,8 @@ pub struct PairSwapsEntity {
     pub tx_id: String,
     pub utxo_id: String,
     pub pair_id: Uuid,
-    pub base_amount: Decimal,
-    pub quote_amount: Decimal,
+    pub base_amount: u64,
+    pub quote_amount: u64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -30,8 +31,8 @@ impl Entity<Model> for PairSwapsEntity {
             tx_id: model.tx_id.clone(),
             utxo_id: model.utxo_id.clone(),
             pair_id: model.pair_id,
-            base_amount: model.base_amount,
-            quote_amount: model.quote_amount,
+            base_amount: model.base_amount.to_u64().unwrap(),
+            quote_amount: model.quote_amount.to_u64().unwrap(),
             created_at: model.created_at.with_timezone(&Utc),
             updated_at: model.updated_at.with_timezone(&Utc),
         }
@@ -45,8 +46,8 @@ impl Entity<Model> for PairSwapsEntity {
             tx_id: self.tx_id.clone(),
             utxo_id: self.utxo_id.clone(),
             pair_id: self.pair_id,
-            base_amount: self.base_amount,
-            quote_amount: self.quote_amount,
+            base_amount: Decimal::from_u64(self.base_amount).unwrap(),
+            quote_amount: Decimal::from_u64(self.quote_amount).unwrap(),
             created_at: self.created_at.into(),
             updated_at: self.updated_at.into(),
         }
@@ -62,8 +63,8 @@ impl Default for PairSwapsEntity {
             tx_id: String::new(),
             utxo_id: String::new(),
             pair_id: Uuid::new_v4(),
-            base_amount: Decimal::ZERO,
-            quote_amount: Decimal::ZERO,
+            base_amount: 0,
+            quote_amount: 0,
             created_at: Utc::now(),
             updated_at: Utc::now(),
         }

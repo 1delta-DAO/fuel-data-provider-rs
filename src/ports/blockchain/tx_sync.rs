@@ -116,8 +116,8 @@ impl TxSync{
                                                 tx_id: swap.tx_id,
                                                 utxo_id: "".to_string(),
                                                 pair_id: token_pair.id,
-                                                base_amount: Decimal::from(swap.swap_event.asset_0_in),
-                                                quote_amount: Decimal::from(swap.swap_event.asset_1_out),
+                                                base_amount: swap.swap_event.asset_0_in,
+                                                quote_amount: swap.swap_event.asset_1_out,
                                                 created_at: Utc::now(),
                                                 updated_at: Utc::now(),
                                             };
@@ -256,15 +256,15 @@ pub async fn add_price(
     Ok(())
 }
 
-async fn update_token_price(token: &TokenEntity, new_price: Decimal, timestamp: DateTime<Utc>) -> Result<(), DbErr> {
+async fn update_token_price(token: &TokenEntity, new_price: u64, timestamp: DateTime<Utc>) -> Result<(), DbErr> {
     let mut token_update = token.clone();
     token_update.updated_at = Utc::now();
-    token_update.price = new_price.to_u64().unwrap();
+    token_update.price = new_price;
     TokenService::update(token_update).await?;
     let price_data = PriceDataEntity {
         id: Uuid::new_v4(),
         token_id: token.id,
-        price: new_price.to_u64().unwrap(),
+        price: new_price,
         timestamp,
     };
     PriceDataService::create(price_data).await?;
