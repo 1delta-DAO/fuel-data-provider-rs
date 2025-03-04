@@ -8,6 +8,7 @@ services:
 #    environment:
 #      RUST_LOG: "info"
 #      SERVER_PORT_HTTP: ${SERVER_PORT_HTTP:-8080}
+#      DB_URL: "db:5432/fuel_data"
 #    networks:
 #      - fuel-data-provider
   db:
@@ -24,6 +25,11 @@ services:
       - db_fuel:/var/lib/postgresql/data
     networks:
       - fuel-data-provider
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U admin -d fuel_data" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
   adminer:
     image: adminer:latest
     container_name: db-adminer-fuel

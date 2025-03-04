@@ -1,40 +1,54 @@
 # Stage 1: Build the Rust application
-FROM rust:1.81.0 AS builder
+FROM rust:slim-bookworm AS builder
+
+# Ustawienie na wersję nightly
+RUN rustup default nightly
 
 # Set the working directory inside the container
 WORKDIR /usr/src/app
 
-# Install protobuf compiler (protoc)
+# Install necessary dependencies with specific OpenSSL paths
 RUN apt-get update && \
-#    apt-get install -y protobuf-compiler && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y \
+    protobuf-compiler \
+    pkg-config \
+    libssl-dev \
+    build-essential \
+    openssl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy the Cargo.toml and Cargo.lock files to fetch dependencies
+# Copy the Cargo.toml and Cargo.lock files separately to leverage Docker's layer caching
 COPY Cargo.toml Cargo.lock ./
 
-# FMT dependency
+# Ensure rustfmt is installed (optional, useful for formatting)
 RUN rustup component add rustfmt
 
 # Pre-fetch the dependencies to speed up the build process
+RUN mkdir src && echo "fn main() {}" > src/main.rs
+
+# Build the application in release mode with explicit environment variables for OpenSSL
+ENV OPENSSL_LIB_DIR=/usr/lib/aarch64-linux-gnu
+ENV OPENSSL_INCLUDE_DIR=/usr/include/openssl
 RUN cargo fetch
 
-# Copy the remaining source code
+# Copy the source code into the container (including resources)
 COPY . .
 
-# Build the application in release mode
-RUN cargo build --release
+# Build with verbose output
+RUN RUST_BACKTRACE=1 cargo build --release
 
-# Stage 2: Create the final image with the necessary dependencies
+# Stage 2: Create the final image with necessary runtime dependencies
 FROM debian:bookworm-slim
 
-# Update package lists and install necessary dependencies for running the application
+# Set environment variables
+ENV RUST_BACKTRACE=1
+
+# Install required runtime dependencies
 RUN apt-get update && \
     apt-get install -y \
     curl \
     libssl3 \
-    libssl-dev \
-    pkg-config \
     ca-certificates \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -42,11 +56,14 @@ RUN apt-get update && \
 # Copy the compiled binary from the builder stage to the final image
 COPY --from=builder /usr/src/app/target/release/fuel_data_provider /usr/local/bin/fuel_data_provider
 
+# Create the resources directory
+RUN mkdir -p /usr/src/app/resources
+
+# Copy the configuration file from builder to final image
+COPY --from=builder /usr/src/app/resources/config.toml /usr/src/app/resources/
+
 # Set the working directory for the application
 WORKDIR /usr/src/app
-
-# Copy the configuration file into the container
-# COPY resources/config.toml ./resources/
 
 # Command to run the application
 CMD ["fuel_data_provider"]
