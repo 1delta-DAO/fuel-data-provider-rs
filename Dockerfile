@@ -56,11 +56,11 @@ RUN mkdir -p src && \
 # Copy the application source
 COPY . .
 
+# List the resources directory to confirm that we have abi files
+RUN find resources -type f | sort
+
 # Build the application
 RUN cargo build --release
-
-# Optional: Install sea-orm-cli if needed
-# RUN cargo install sea-orm-cli
 
 # Stage 2: Create the final image with necessary runtime dependencies
 FROM debian:bookworm-slim
@@ -79,20 +79,20 @@ RUN apt-get update && \
 # Copy the compiled binary from the builder stage to the final image
 COPY --from=builder /usr/src/app/target/release/fuel_data_provider /usr/local/bin/fuel_data_provider
 
-# Optional: Copy sea-orm-cli if installed
-# COPY --from=builder /usr/local/cargo/bin/sea-orm-cli /usr/local/bin/sea-orm-cli
-
 # Create necessary directories
 RUN mkdir -p /usr/src/app/resources
 
-# Copy configuration files
-COPY --from=builder /usr/src/app/resources/config.toml /usr/src/app/resources/
+# Copy the entire resources directory from builder
+COPY --from=builder /usr/src/app/resources /usr/src/app/resources/
 
 # Copy migration files if they exist
 COPY --from=builder /usr/src/app/migration /usr/src/app/migration 2>/dev/null || true
 
 # Set the working directory for the application
 WORKDIR /usr/src/app
+
+# Verify the resources directory in the final image
+RUN find resources -type f | sort || echo "Resources directory might be empty"
 
 # Command to run the application
 CMD ["fuel_data_provider"]
