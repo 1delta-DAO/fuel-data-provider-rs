@@ -14,71 +14,53 @@ RUN apt-get update && \
     pkg-config \
     libssl-dev \
     build-essential \
-    openssl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Check architecture and set OpenSSL paths accordingly
-RUN ARCH=$(dpkg --print-architecture) && \
-    if [ "$ARCH" = "amd64" ]; then \
-        echo "export OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> ~/.bashrc && \
-        echo "export OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> ~/.bashrc && \
-        export OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu && \
-        export OPENSSL_INCLUDE_DIR=/usr/include/openssl; \
-    elif [ "$ARCH" = "arm64" ]; then \
-        echo "export OPENSSL_LIB_DIR=/usr/lib/aarch64-linux-gnu" >> ~/.bashrc && \
-        echo "export OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> ~/.bashrc && \
-        export OPENSSL_LIB_DIR=/usr/lib/aarch64-linux-gnu && \
-        export OPENSSL_INCLUDE_DIR=/usr/include/openssl; \
-    else \
-        echo "export OPENSSL_LIB_DIR=/usr/lib" >> ~/.bashrc && \
-        echo "export OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> ~/.bashrc && \
-        export OPENSSL_LIB_DIR=/usr/lib && \
-        export OPENSSL_INCLUDE_DIR=/usr/include/openssl; \
+# Determine architecture and set up symlinks if needed
+RUN if [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then \
+      if [ ! -d "/usr/lib/aarch64-linux-gnu" ]; then \
+        mkdir -p /usr/lib/aarch64-linux-gnu; \
+      fi; \
+      # Create symlinks for common SSL libraries if they don't exist in the aarch64 dir
+      for f in /usr/lib/libssl.so* /usr/lib/libcrypto.so*; do \
+        if [ -f "$f" ] && [ ! -f "/usr/lib/aarch64-linux-gnu/$(basename $f)" ]; then \
+          ln -sf "$f" "/usr/lib/aarch64-linux-gnu/$(basename $f)"; \
+        fi; \
+      done; \
+    elif [ "$(uname -m)" = "x86_64" ]; then \
+      if [ ! -d "/usr/lib/x86_64-linux-gnu" ]; then \
+        mkdir -p /usr/lib/x86_64-linux-gnu; \
+      fi; \
+      # Create symlinks for common SSL libraries if they don't exist in the x86_64 dir
+      for f in /usr/lib/libssl.so* /usr/lib/libcrypto.so*; do \
+        if [ -f "$f" ] && [ ! -f "/usr/lib/x86_64-linux-gnu/$(basename $f)" ]; then \
+          ln -sf "$f" "/usr/lib/x86_64-linux-gnu/$(basename $f)"; \
+        fi; \
+      done; \
     fi
 
-# Check architecture and print OpenSSL paths for debugging
-RUN ARCH=$(dpkg --print-architecture) && \
-    echo "Detected architecture: $ARCH" && \
-    if [ "$ARCH" = "amd64" ]; then \
-        ls -la /usr/lib/x86_64-linux-gnu/ | grep libssl || echo "libssl not found in expected location"; \
-    elif [ "$ARCH" = "arm64" ]; then \
-        ls -la /usr/lib/aarch64-linux-gnu/ | grep libssl || echo "libssl not found in expected location"; \
-    fi && \
-    ls -la /usr/lib/ | grep libssl || echo "libssl not found in /usr/lib/" && \
-    ls -la /usr/include/openssl || echo "openssl headers not found"
+# Print environment information for debugging
+RUN echo "Architecture: $(uname -m)" && \
+    find /usr/lib -name "libssl.so*" | sort && \
+    find /usr/include -name "openssl" | sort
 
-# Copy the Cargo.toml and Cargo.lock files separately to leverage Docker's layer caching
+# Copy the Cargo.toml and Cargo.lock files
 COPY Cargo.toml Cargo.lock ./
 
-# Ensure rustfmt is installed (optional, useful for formatting)
-RUN rustup component add rustfmt
+# Create dummy source for dependency caching
+RUN mkdir -p src && \
+    echo "fn main() {println!(\"Hello World!\");}" > src/main.rs && \
+    cargo fetch
 
-# Pre-fetch the dependencies to speed up the build process
-RUN mkdir src && echo "fn main() {}" > src/main.rs
-
-# Copy the source code into the container (including resources and migrations)
+# Copy the application source
 COPY . .
 
-# Build with verbose output
-RUN ARCH=$(dpkg --print-architecture) && \
-    if [ "$ARCH" = "amd64" ]; then \
-        OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu OPENSSL_INCLUDE_DIR=/usr/include/openssl RUST_BACKTRACE=1 cargo build --release -vv; \
-    elif [ "$ARCH" = "arm64" ]; then \
-        OPENSSL_LIB_DIR=/usr/lib/aarch64-linux-gnu OPENSSL_INCLUDE_DIR=/usr/include/openssl RUST_BACKTRACE=1 cargo build --release -vv; \
-    else \
-        OPENSSL_LIB_DIR=/usr/lib OPENSSL_INCLUDE_DIR=/usr/include/openssl RUST_BACKTRACE=1 cargo build --release -vv; \
-    fi
+# Build the application
+RUN cargo build --release
 
-# Instalacja sea-orm-cli
-RUN ARCH=$(dpkg --print-architecture) && \
-    if [ "$ARCH" = "amd64" ]; then \
-        OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu OPENSSL_INCLUDE_DIR=/usr/include/openssl cargo install sea-orm-cli; \
-    elif [ "$ARCH" = "arm64" ]; then \
-        OPENSSL_LIB_DIR=/usr/lib/aarch64-linux-gnu OPENSSL_INCLUDE_DIR=/usr/include/openssl cargo install sea-orm-cli; \
-    else \
-        OPENSSL_LIB_DIR=/usr/lib OPENSSL_INCLUDE_DIR=/usr/include/openssl cargo install sea-orm-cli; \
-    fi
+# Optional: Install sea-orm-cli if needed
+# RUN cargo install sea-orm-cli
 
 # Stage 2: Create the final image with necessary runtime dependencies
 FROM debian:bookworm-slim
@@ -89,7 +71,6 @@ ENV RUST_BACKTRACE=1
 # Install required runtime dependencies
 RUN apt-get update && \
     apt-get install -y \
-    curl \
     libssl3 \
     ca-certificates \
     && apt-get clean \
@@ -98,17 +79,17 @@ RUN apt-get update && \
 # Copy the compiled binary from the builder stage to the final image
 COPY --from=builder /usr/src/app/target/release/fuel_data_provider /usr/local/bin/fuel_data_provider
 
-# Copy sea-orm-cli from builder stage
-COPY --from=builder /usr/local/cargo/bin/sea-orm-cli /usr/local/bin/sea-orm-cli
+# Optional: Copy sea-orm-cli if installed
+# COPY --from=builder /usr/local/cargo/bin/sea-orm-cli /usr/local/bin/sea-orm-cli
 
-# Create the resources directory
+# Create necessary directories
 RUN mkdir -p /usr/src/app/resources
 
-# Copy the configuration file from builder to final image
+# Copy configuration files
 COPY --from=builder /usr/src/app/resources/config.toml /usr/src/app/resources/
 
 # Copy migration files if they exist
-COPY --from=builder /usr/src/app/migration /usr/src/app/migration
+COPY --from=builder /usr/src/app/migration /usr/src/app/migration 2>/dev/null || true
 
 # Set the working directory for the application
 WORKDIR /usr/src/app
