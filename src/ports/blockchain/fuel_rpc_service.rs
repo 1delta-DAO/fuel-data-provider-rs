@@ -59,7 +59,7 @@ impl FuelRpcService {
         let provider3= Provider::connect(CONFIG.default.rpc_url_three.as_str()).await?;
 
         Ok(FuelRpcService {
-            providers: vec![provider1, provider2, provider3],
+            providers: vec![provider1,provider2, provider3],
             cache: Arc::new(Mutex::new(HashMap::new()))
         })
     }
