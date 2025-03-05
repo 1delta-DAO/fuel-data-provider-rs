@@ -54,12 +54,12 @@ pub struct FuelRpcService {
 impl FuelRpcService {
     pub async fn new() -> Result<Self, fuels::types::errors::Error> {
 
-        //let provider1= Provider::connect(CONFIG.default.rpc_url_one.as_str()).await?;
+        let provider1= Provider::connect(CONFIG.default.rpc_url_one.as_str()).await?;
         let provider2= Provider::connect(CONFIG.default.rpc_url_two.as_str()).await?;
         let provider3= Provider::connect(CONFIG.default.rpc_url_three.as_str()).await?;
 
         Ok(FuelRpcService {
-            providers: vec![/*provider1, */provider2, provider3],
+            providers: vec![provider1,provider2, provider3],
             cache: Arc::new(Mutex::new(HashMap::new()))
         })
     }
