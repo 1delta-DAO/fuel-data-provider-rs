@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::str::FromStr;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use chrono::{DateTime, Utc};
 use fuels::prelude::{abigen, Bech32ContractId, Error, Execution, Provider, WalletUnlocked};
 use fuels::types::{AssetId, BlockHeight, ContractId};
@@ -74,19 +74,21 @@ impl TxSync{
                 let mut updated_pairs: HashMap<Uuid, TokenPairsEntity> = HashMap::new();
 
                 for block_height in start_block..=current_block {
-                    //log::info!("TXS-{}: - Block {} - Start",runner_id,block_height);
+                    let start = Instant::now();
+                    //log::info!("TXS-{}: - Block {} - Start",runner_id,block_height, start.elapsed());
 
                     if is_block_in_calc_window(&provider, block_height as u64).await {
                         //let block = provider.block_by_height(BlockHeight::from(block_height)).await?;
-
+                        //log::info!("TXS-{}: - Block {} - Start - block found {:?}",runner_id,block_height, start.elapsed());
                         let mut pair_swaps_vec: Vec<PairSwapsEntity> = Vec::new();
 
                         if PairSwapsService::exists_by_block_number(block_height as i32).await{
-                            log::info!("TXS-{}: - Block {} - PairSwaps already exists - skipped",runner_id,block_height);
+                            log::info!("TXS-{}: - Block {} - PairSwaps already exists - skipped - ut:{:?}",runner_id,block_height, start.elapsed());
                             continue;
                         }
 
                         let swaps = fuel_rpc_service.get_logs(block_height).await?;
+                        //log::info!("TXS-{}: - Block {} - Swaps: {} ut:{:?}",runner_id,block_height,swaps.len(), start.elapsed());
 
                             if !swaps.is_empty(){
 
@@ -139,13 +141,13 @@ impl TxSync{
                                 log::info!("TXS-{}: - Block {} - PairSwaps: {}",runner_id,block_height,pair_swaps_vec.len());
                                 let _ = PairSwapsService::create_many_with_sync(pair_swaps_vec, block_height as i32,block_time).await;
                             }else {
-                                log::info!("TXS-{}: - Block {} - No swaps found - skipped",runner_id,block_height);
+                                log::info!("TXS-{}: - Block {} - No swaps found - skipped - ut:{:?}",runner_id,block_height, start.elapsed());
                                 continue;
                             }
                         //}
                     }
                     else{
-                        log::info!("TXS-{}: Block {} out of calc window - skipped",runner_id,block_height);
+                        log::info!("TXS-{}: Block {} out of calc window - skipped - ut:{:?}",runner_id,block_height, start.elapsed());
                     }
 
                 }

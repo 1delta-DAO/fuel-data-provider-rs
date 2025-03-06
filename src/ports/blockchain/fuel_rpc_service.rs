@@ -188,12 +188,12 @@ impl FuelRpcService {
         else{
             // First check if block exists in cache
             let latest_cached_block = self.get_latest_cached_block();
+            let first_cached_block = self.get_first_cached_block();
 
             if let Some(cached_block) = latest_cached_block {
-                if requested_block <= cached_block {
+                if requested_block <= cached_block && requested_block >= first_cached_block.unwrap_or(0){
                     // We already have this block in cache
-                    let provider = &self.providers[0];
-                    return self.get_logs_by_block_number(provider, requested_block).await;
+                    return Ok(Vec::new());
                 }
             }
 
@@ -213,16 +213,17 @@ impl FuelRpcService {
             let start_block = latest_cached_block.map(|b| b + 1).unwrap_or(requested_block);
 
             log::info!(
-            "Updating cache from block {} to {}",
-            start_block,
-            latest_block_number
-        );
+                "Updating cache from block {} to {}",
+                start_block,
+                latest_block_number
+            );
 
             self.get_logs_from_block_range(start_block, latest_block_number).await;
 
             // Return the logs for the requested block
-            let provider = &self.providers[0];
-            self.get_logs_by_block_number(provider, requested_block).await
+            //block from cache after update
+            let new_result = self.cache.lock().unwrap().get(&requested_block.to_string()).map(|v| v.clone()).unwrap_or(Vec::new());
+            Ok(new_result)
         }
     }
 
@@ -231,5 +232,11 @@ impl FuelRpcService {
         cache.keys()
             .map(|k| k.parse::<u32>().unwrap_or(0))
             .max()
+    }
+    fn get_first_cached_block(&self) -> Option<u32> {
+        let cache = self.cache.lock().unwrap();
+        cache.keys()
+            .map(|k| k.parse::<u32>().unwrap_or(0))
+            .min()
     }
 }
