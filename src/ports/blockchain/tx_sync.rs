@@ -141,7 +141,7 @@ impl TxSync{
                                 log::info!("TXS-{}: - Block {} - PairSwaps: {}",runner_id,block_height,pair_swaps_vec.len());
                                 let _ = PairSwapsService::create_many_with_sync(pair_swaps_vec, block_height as i32,block_time).await;
                             }else {
-                                log::info!("TXS-{}: - Block {} - No swaps found - skipped - ut:{:?}",runner_id,block_height, start.elapsed());
+                                //log::info!("TXS-{}: - Block {} - No swaps found - skipped - ut:{:?}",runner_id,block_height, start.elapsed());
                                 continue;
                             }
                         //}
@@ -232,18 +232,18 @@ pub async fn add_price(
     match (token_base.quoting, token_quote.quoting) {
         (true, false) => {
             // token_base is quoting, calculate price of token_quote
-            let price = pair_swap.base_amount / pair_swap.quote_amount;
+            let price = pair_swap.base_amount as f64/ pair_swap.quote_amount as f64;
             update_token_price(token_base, price, timestamp).await?;
         }
         (false, true) => {
             // token_quote is quoting, calculate price of token_base
-            let price = pair_swap.quote_amount / pair_swap.base_amount;
+            let price = pair_swap.quote_amount as f64 / pair_swap.base_amount as f64;
             update_token_price(token_quote, price, timestamp).await?;
         }
         (true, true) => {
             // Both tokens are quoting, assign reciprocal prices
-            let base_price = pair_swap.base_amount / pair_swap.quote_amount;
-            let quote_price = pair_swap.quote_amount / pair_swap.base_amount;
+            let base_price = pair_swap.base_amount as f64 / pair_swap.quote_amount as f64;
+            let quote_price = pair_swap.quote_amount as f64 / pair_swap.base_amount as f64;
             update_token_price(token_base, base_price, timestamp).await?;
             update_token_price(token_quote, quote_price, timestamp).await?;
         }
@@ -258,10 +258,11 @@ pub async fn add_price(
     Ok(())
 }
 
-async fn update_token_price(token: &TokenEntity, new_price: u64, timestamp: DateTime<Utc>) -> Result<(), DbErr> {
+async fn update_token_price(token: &TokenEntity, new_price: f64, timestamp: DateTime<Utc>) -> Result<(), DbErr> {
     let mut token_update = token.clone();
     token_update.updated_at = Utc::now();
     token_update.price = new_price;
+    log::info!("Updating token price: {} - {}", token.symbol, new_price);
     TokenService::update(token_update).await?;
     let price_data = PriceDataEntity {
         id: Uuid::new_v4(),
@@ -269,6 +270,7 @@ async fn update_token_price(token: &TokenEntity, new_price: u64, timestamp: Date
         price: new_price,
         timestamp,
     };
+    log::info!("Updating price data: {}", price_data.token_id);
     PriceDataService::create(price_data).await?;
     Ok(())
 }
@@ -394,8 +396,8 @@ async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -
                             address: asset_id.to_string(),
                             symbol: token_symbol,
                             name: token_name,
-                            price: 0,
-                            volume_24: 0,
+                            price: 0.0,
+                            volume_24: 0.0,
                             decimals: token_decimals as i32,
                             created_at: Utc::now(),
                             updated_at: Utc::now(),
@@ -470,8 +472,8 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
                             address: asset_id.to_string(),
                             symbol: token_symbol,
                             name: token_name,
-                            price: 0,
-                            volume_24: 0,
+                            price: 0.0,
+                            volume_24: 0.0,
                             decimals: token_decimals as i32,
                             created_at: Utc::now(),
                             updated_at: Utc::now(),
@@ -507,8 +509,8 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
                                             address: asset_id.to_string(),
                                             symbol: token_symbol,
                                             name: token_name,
-                                            price: 0,
-                                            volume_24: 0,
+                                            price: 0.0,
+                                            volume_24: 0.0,
                                             decimals: token_decimals as i32,
                                             created_at: Utc::now(),
                                             updated_at: Utc::now(),
