@@ -232,21 +232,35 @@ pub async fn add_price(
         }
     };
 
+    log::info!(
+        "Adding price for {}/{}: {}/{} : {}/{} : {}/{}",
+        token_base.symbol,
+        token_quote.symbol,
+        pair_swap.base_amount,
+        pair_swap.quote_amount,
+        token_base.decimals,
+        token_quote.decimals,
+        token_base.quoting,
+        token_quote.quoting);
+
     match (token_base.quoting, token_quote.quoting) {
-        (true, false) => {
+        (false,true) => {
             // token_base is quoting, calculate price of token_quote
-            let price = pair_swap.base_amount as f64/ pair_swap.quote_amount as f64;
+            let price = (pair_swap.quote_amount as f64/10f32.powi(token_quote.decimals) as f64) / (pair_swap.base_amount as f64/10f32.powi(token_base.decimals) as f64);
+            log::info!("Opt 0 - Price: {}",price);
             update_token_price(token_base, price, timestamp).await?;
         }
-        (false, true) => {
+        (true,false) => {
             // token_quote is quoting, calculate price of token_base
-            let price = pair_swap.quote_amount as f64 / pair_swap.base_amount as f64;
+            let price = (pair_swap.base_amount as f64/10f32.powi(token_base.decimals) as f64)/ (pair_swap.quote_amount as f64/10f32.powi(token_quote.decimals) as f64);
+            log::info!("Opt 1 - Price: {}",price);
             update_token_price(token_quote, price, timestamp).await?;
         }
         (true, true) => {
             // Both tokens are quoting, assign reciprocal prices
-            let base_price = pair_swap.base_amount as f64 / pair_swap.quote_amount as f64;
-            let quote_price = pair_swap.quote_amount as f64 / pair_swap.base_amount as f64;
+            let base_price = (pair_swap.base_amount as f64/10f32.powi(token_base.decimals) as f64) / (pair_swap.quote_amount as f64/10f32.powi(token_quote.decimals) as f64);
+            let quote_price = (pair_swap.quote_amount as f64/10f32.powi(token_quote.decimals) as f64) / (pair_swap.base_amount as f64/10f32.powi(token_base.decimals) as f64);
+            log::info!("Opt 3 - Price: {} - {}",base_price, quote_price);
             update_token_price(token_base, base_price, timestamp).await?;
             update_token_price(token_quote, quote_price, timestamp).await?;
         }
@@ -265,15 +279,13 @@ async fn update_token_price(token: &TokenEntity, new_price: f64, timestamp: Date
     let mut token_update = token.clone();
     token_update.updated_at = Utc::now();
     token_update.price = new_price;
-    log::info!("Updating token price: {} - {}", token.symbol, new_price);
-    TokenService::update(token_update).await?;
+    let updated_token = TokenService::update_price(token_update).await?;
     let price_data = PriceDataEntity {
         id: Uuid::new_v4(),
         token_id: token.id,
         price: new_price,
         timestamp,
     };
-    log::info!("Updating price data: {}", price_data.token_id);
     PriceDataService::create(price_data).await?;
     Ok(())
 }

@@ -89,7 +89,7 @@ impl MigrationTrait for Migration {
                 "286c479da40dc953bddc3bb4c453b608bba2e0ac483b077bd475174115395e6b",
                 "USDC",
                 "USD Coin",
-                9,
+                6,
                 true,
             ))
             .await?;
