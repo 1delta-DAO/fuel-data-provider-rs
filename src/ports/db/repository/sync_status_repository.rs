@@ -2,7 +2,9 @@ use crate::ports::db::model::sync_status;
 use crate::ports::db::model::sync_status::Model;
 use crate::ports::db::repository::CrudRepository;
 use async_trait::async_trait;
-use sea_orm::DbErr;
+use sea_orm::ActiveValue::Set;
+use chrono::Utc;
+use sea_orm::{ActiveModelTrait, ActiveValue, DbErr, EntityTrait, IntoActiveModel};
 use uuid::Uuid;
 
 pub struct SyncStatusRepository;
@@ -27,4 +29,23 @@ impl SyncStatusRepository {
             }
         }
     }
+
+    pub async fn update_last_block(last_block: i32) -> Result<(), DbErr> {
+        let mut sync_status_model = Self::get_status().await?;
+
+        let mut active_model = match sync_status_model {
+            Some(model) => model.into_active_model(), // Convert existing to ActiveModel
+            None => sync_status::ActiveModel {
+                id: ActiveValue::Set(uuid::Uuid::new_v4()),
+                ..Default::default()
+            },
+        };
+        active_model.block_number = Set(last_block);
+        active_model.updated_at = Set(Utc::now().into());
+
+        Self::update(active_model).await?;
+
+        Ok(())
+    }
+
 }

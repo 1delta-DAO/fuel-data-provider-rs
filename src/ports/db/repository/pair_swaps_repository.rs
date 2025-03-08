@@ -54,7 +54,7 @@ impl PairSwapsRepository {
         updated_sync_status.block_number = Set(block_number);
         updated_sync_status.block_time = Set(Some(block_time).map(|t| t.into()));
         updated_sync_status.updated_at = Set(Utc::now().into());
-
+        log::info!("Sync status: {:?}",updated_sync_status);
         // Save updated SyncStatus within the transaction
         if updated_sync_status.update(&txn).await.is_err() {
             txn.rollback().await?;

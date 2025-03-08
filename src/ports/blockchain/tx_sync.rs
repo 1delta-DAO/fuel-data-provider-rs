@@ -39,7 +39,7 @@ impl TxSync{
         wallet.set_provider(provider.clone());
 
         //let mut start_block:u32 = provider.latest_block_height().await?; // get_start_block_number().await;
-        let start_block:u32 = get_start_block_number().await;
+        let mut start_block:u32 = get_start_block_number().await;
         log::info!("TXS-{}: Starting from block: {}",runner_id,start_block);
         let start_block_time = get_block_time_by_block_height(&provider, start_block).await;
 
@@ -62,6 +62,7 @@ impl TxSync{
                 }
             }*/
 
+            start_block = get_start_block_number().await;
 
             //return Ok(());
 
@@ -141,6 +142,8 @@ impl TxSync{
                                 log::info!("TXS-{}: - Block {} - PairSwaps: {}",runner_id,block_height,pair_swaps_vec.len());
                                 let _ = PairSwapsService::create_many_with_sync(pair_swaps_vec, block_height as i32,block_time).await;
                             }else {
+                                let _ = SyncStatusService::update_block_number(block_height as i32).await;
+                                fuel_rpc_service.remove_from_cache(block_height as u32).await;
                                 //log::info!("TXS-{}: - Block {} - No swaps found - skipped - ut:{:?}",runner_id,block_height, start.elapsed());
                                 continue;
                             }

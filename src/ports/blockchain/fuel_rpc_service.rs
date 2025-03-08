@@ -239,4 +239,9 @@ impl FuelRpcService {
             .map(|k| k.parse::<u32>().unwrap_or(0))
             .min()
     }
+
+    pub async fn remove_from_cache(&self, block_number: u32){
+        let mut cache = self.cache.lock().unwrap();
+            cache.remove(&block_number.to_string());
+    }
 }
