@@ -22,4 +22,8 @@ impl SyncStatusService{
             Err(err) => Err(err),
         }
     }
+
+    pub async fn update_block_number(block_number: i32) -> Result<(), DbErr> {
+        SyncStatusRepository::update_last_block(block_number).await
+    }
 }

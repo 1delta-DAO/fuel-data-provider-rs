@@ -8,7 +8,7 @@ use uuid::Uuid;
 pub struct PriceDataEntity {
     pub id: Uuid,
     pub token_id: Uuid,
-    pub price: u64,
+    pub price: f64,
     pub timestamp: DateTime<Utc>,
 }
 
@@ -17,7 +17,7 @@ impl Entity<Model> for PriceDataEntity {
         Self {
             id: model.id,
             token_id: model.token_id,
-            price: model.price.to_u64().unwrap(),
+            price: model.price.to_f64().unwrap(),
             timestamp: model.timestamp.with_timezone(&Utc),
         }
     }
@@ -26,7 +26,7 @@ impl Entity<Model> for PriceDataEntity {
         Model {
             id: self.id,
             token_id: self.token_id,
-            price: Decimal::from_u64(self.price.clone()).unwrap(),
+            price: Decimal::from_f64(self.price.clone()).unwrap(),
             timestamp: self.timestamp.into(),
         }
     }
@@ -37,7 +37,7 @@ impl Default for PriceDataEntity {
         Self {
             id: Uuid::new_v4(),
             token_id: Uuid::new_v4(),
-            price: 0,
+            price: 0.0,
             timestamp: Utc::now(),
         }
     }

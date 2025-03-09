@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::str::FromStr;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use chrono::{DateTime, Utc};
 use fuels::prelude::{abigen, Bech32ContractId, Error, Execution, Provider, WalletUnlocked};
 use fuels::types::{AssetId, BlockHeight, ContractId};
@@ -39,7 +39,7 @@ impl TxSync{
         wallet.set_provider(provider.clone());
 
         //let mut start_block:u32 = provider.latest_block_height().await?; // get_start_block_number().await;
-        let start_block:u32 = get_start_block_number().await;
+        let mut start_block:u32 = get_start_block_number().await;
         log::info!("TXS-{}: Starting from block: {}",runner_id,start_block);
         let start_block_time = get_block_time_by_block_height(&provider, start_block).await;
 
@@ -62,6 +62,7 @@ impl TxSync{
                 }
             }*/
 
+            start_block = get_start_block_number().await;
 
             //return Ok(());
 
@@ -74,19 +75,21 @@ impl TxSync{
                 let mut updated_pairs: HashMap<Uuid, TokenPairsEntity> = HashMap::new();
 
                 for block_height in start_block..=current_block {
-                    //log::info!("TXS-{}: - Block {} - Start",runner_id,block_height);
+                    let start = Instant::now();
+                    //log::info!("TXS-{}: - Block {} - Start",runner_id,block_height, start.elapsed());
 
                     if is_block_in_calc_window(&provider, block_height as u64).await {
                         //let block = provider.block_by_height(BlockHeight::from(block_height)).await?;
-
+                        //log::info!("TXS-{}: - Block {} - Start - block found {:?}",runner_id,block_height, start.elapsed());
                         let mut pair_swaps_vec: Vec<PairSwapsEntity> = Vec::new();
 
                         if PairSwapsService::exists_by_block_number(block_height as i32).await{
-                            log::info!("TXS-{}: - Block {} - PairSwaps already exists - skipped",runner_id,block_height);
+                            log::info!("TXS-{}: - Block {} - PairSwaps already exists - skipped - ut:{:?}",runner_id,block_height, start.elapsed());
                             continue;
                         }
 
                         let swaps = fuel_rpc_service.get_logs(block_height).await?;
+                        //log::info!("TXS-{}: - Block {} - Swaps: {} ut:{:?}",runner_id,block_height,swaps.len(), start.elapsed());
 
                             if !swaps.is_empty(){
 
@@ -139,13 +142,15 @@ impl TxSync{
                                 log::info!("TXS-{}: - Block {} - PairSwaps: {}",runner_id,block_height,pair_swaps_vec.len());
                                 let _ = PairSwapsService::create_many_with_sync(pair_swaps_vec, block_height as i32,block_time).await;
                             }else {
-                                log::info!("TXS-{}: - Block {} - No swaps found - skipped",runner_id,block_height);
+                                let _ = SyncStatusService::update_block_number(block_height as i32).await;
+                                fuel_rpc_service.remove_from_cache(block_height as u32).await;
+                                //log::info!("TXS-{}: - Block {} - No swaps found - skipped - ut:{:?}",runner_id,block_height, start.elapsed());
                                 continue;
                             }
                         //}
                     }
                     else{
-                        log::info!("TXS-{}: Block {} out of calc window - skipped",runner_id,block_height);
+                        log::info!("TXS-{}: Block {} out of calc window - skipped - ut:{:?}",runner_id,block_height, start.elapsed());
                     }
 
                 }
@@ -227,21 +232,35 @@ pub async fn add_price(
         }
     };
 
+    log::info!(
+        "Adding price for {}/{}: {}/{} : {}/{} : {}/{}",
+        token_base.symbol,
+        token_quote.symbol,
+        pair_swap.base_amount,
+        pair_swap.quote_amount,
+        token_base.decimals,
+        token_quote.decimals,
+        token_base.quoting,
+        token_quote.quoting);
+
     match (token_base.quoting, token_quote.quoting) {
-        (true, false) => {
+        (false,true) => {
             // token_base is quoting, calculate price of token_quote
-            let price = pair_swap.base_amount / pair_swap.quote_amount;
+            let price = (pair_swap.quote_amount as f64/10f32.powi(token_quote.decimals) as f64) / (pair_swap.base_amount as f64/10f32.powi(token_base.decimals) as f64);
+            log::info!("Opt 0 - Price: {}",price);
             update_token_price(token_base, price, timestamp).await?;
         }
-        (false, true) => {
+        (true,false) => {
             // token_quote is quoting, calculate price of token_base
-            let price = pair_swap.quote_amount / pair_swap.base_amount;
+            let price = (pair_swap.base_amount as f64/10f32.powi(token_base.decimals) as f64)/ (pair_swap.quote_amount as f64/10f32.powi(token_quote.decimals) as f64);
+            log::info!("Opt 1 - Price: {}",price);
             update_token_price(token_quote, price, timestamp).await?;
         }
         (true, true) => {
             // Both tokens are quoting, assign reciprocal prices
-            let base_price = pair_swap.base_amount / pair_swap.quote_amount;
-            let quote_price = pair_swap.quote_amount / pair_swap.base_amount;
+            let base_price = (pair_swap.base_amount as f64/10f32.powi(token_base.decimals) as f64) / (pair_swap.quote_amount as f64/10f32.powi(token_quote.decimals) as f64);
+            let quote_price = (pair_swap.quote_amount as f64/10f32.powi(token_quote.decimals) as f64) / (pair_swap.base_amount as f64/10f32.powi(token_base.decimals) as f64);
+            log::info!("Opt 3 - Price: {} - {}",base_price, quote_price);
             update_token_price(token_base, base_price, timestamp).await?;
             update_token_price(token_quote, quote_price, timestamp).await?;
         }
@@ -256,11 +275,11 @@ pub async fn add_price(
     Ok(())
 }
 
-async fn update_token_price(token: &TokenEntity, new_price: u64, timestamp: DateTime<Utc>) -> Result<(), DbErr> {
+async fn update_token_price(token: &TokenEntity, new_price: f64, timestamp: DateTime<Utc>) -> Result<(), DbErr> {
     let mut token_update = token.clone();
     token_update.updated_at = Utc::now();
     token_update.price = new_price;
-    TokenService::update(token_update).await?;
+    let updated_token = TokenService::update_price(token_update).await?;
     let price_data = PriceDataEntity {
         id: Uuid::new_v4(),
         token_id: token.id,
@@ -392,8 +411,8 @@ async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -
                             address: asset_id.to_string(),
                             symbol: token_symbol,
                             name: token_name,
-                            price: 0,
-                            volume_24: 0,
+                            price: 0.0,
+                            volume_24: 0.0,
                             decimals: token_decimals as i32,
                             created_at: Utc::now(),
                             updated_at: Utc::now(),
@@ -468,8 +487,8 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
                             address: asset_id.to_string(),
                             symbol: token_symbol,
                             name: token_name,
-                            price: 0,
-                            volume_24: 0,
+                            price: 0.0,
+                            volume_24: 0.0,
                             decimals: token_decimals as i32,
                             created_at: Utc::now(),
                             updated_at: Utc::now(),
@@ -505,8 +524,8 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
                                             address: asset_id.to_string(),
                                             symbol: token_symbol,
                                             name: token_name,
-                                            price: 0,
-                                            volume_24: 0,
+                                            price: 0.0,
+                                            volume_24: 0.0,
                                             decimals: token_decimals as i32,
                                             created_at: Utc::now(),
                                             updated_at: Utc::now(),

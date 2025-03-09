@@ -1,8 +1,11 @@
 use chrono::{DateTime, Utc};
+use num_traits::FromPrimitive;
 use crate::domain::entity::entity::Entity;
 use crate::ports::db::model::token::{self};
 use crate::ports::db::repository::{CrudRepository, TokenRepository};
 use sea_orm::{DbErr, IntoActiveModel};
+use sea_orm::ActiveValue::Set;
+use sea_orm::prelude::Decimal;
 use crate::domain::entity::TokenEntity;
 
 pub struct TokenService;
@@ -45,8 +48,20 @@ impl TokenService {
     }
 
     /// Updates an existing token
-    pub async fn update(token_entity: TokenEntity) -> Result<TokenEntity, DbErr> {
-        let active_model: token::ActiveModel = token_entity.to_model().into();
+    pub async fn update_price(token_entity: TokenEntity) -> Result<TokenEntity, DbErr> {
+        let mut active_model: token::ActiveModel = token_entity.to_model().into();
+        active_model.price = Set(Decimal::from_f64(token_entity.price).unwrap());
+        active_model.updated_at = Set(Utc::now().into());
+        let updated_model = TokenRepository::update(active_model).await?;
+        Ok(TokenEntity::from_model(&updated_model))
+    }
+
+    pub async fn update_volume(token_entity: TokenEntity) -> Result<TokenEntity, DbErr> {
+        let mut active_model: token::ActiveModel = token_entity.to_model().into();
+        active_model.volume24 = Set(Decimal::from_f64(token_entity.volume_24).unwrap());
+        active_model.updated_at = Set(Utc::now().into());
+
+        log::info!("Active Model: {:?}", active_model);
         let updated_model = TokenRepository::update(active_model).await?;
         Ok(TokenEntity::from_model(&updated_model))
     }

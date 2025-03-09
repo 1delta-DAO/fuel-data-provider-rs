@@ -89,7 +89,7 @@ impl MigrationTrait for Migration {
                 "286c479da40dc953bddc3bb4c453b608bba2e0ac483b077bd475174115395e6b",
                 "USDC",
                 "USD Coin",
-                9,
+                6,
                 true,
             ))
             .await?;
@@ -242,10 +242,10 @@ impl MigrationTrait for Migration {
         manager.drop_table(Table::drop().table(PairSwaps::Table).if_exists().to_owned()).await?;
         manager.drop_table(Table::drop().table(MiraPools::Table).if_exists().to_owned()).await?;
         manager.drop_table(Table::drop().table(TokenPairs::Table).if_exists().to_owned()).await?;
-        manager.drop_table(Table::drop().table(Token::Table).if_exists().to_owned()).await?;
-        manager.drop_table(Table::drop().table(UnknownToken::Table).if_exists().to_owned()).await?;
         manager.drop_table(Table::drop().table(VolumeData::Table).if_exists().to_owned()).await?;
         manager.drop_table(Table::drop().table(PriceData::Table).if_exists().to_owned()).await?;
+        manager.drop_table(Table::drop().table(Token::Table).if_exists().to_owned()).await?;
+        manager.drop_table(Table::drop().table(UnknownToken::Table).if_exists().to_owned()).await?;
         Ok(())
     }
 }
