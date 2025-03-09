@@ -42,4 +42,8 @@ impl VolumeDataService {
         let models = VolumeDataRepository::find_by_token_id(token_id).await?;
         Ok(models.into_iter().map(|model| VolumeDataEntity::from_model(&model)).collect())
     }
+
+    pub async fn delete_expired() -> Result<u64, DbErr> {
+        VolumeDataRepository::delete_expired().await
+    }
 }

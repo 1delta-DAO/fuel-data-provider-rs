@@ -232,7 +232,7 @@ pub async fn add_price(
         }
     };
 
-    log::info!(
+    /*log::info!(
         "Adding price for {}/{}: {}/{} : {}/{} : {}/{}",
         token_base.symbol,
         token_quote.symbol,
@@ -241,26 +241,23 @@ pub async fn add_price(
         token_base.decimals,
         token_quote.decimals,
         token_base.quoting,
-        token_quote.quoting);
+        token_quote.quoting);*/
 
     match (token_base.quoting, token_quote.quoting) {
         (false,true) => {
             // token_base is quoting, calculate price of token_quote
             let price = (pair_swap.quote_amount as f64/10f32.powi(token_quote.decimals) as f64) / (pair_swap.base_amount as f64/10f32.powi(token_base.decimals) as f64);
-            log::info!("Opt 0 - Price: {}",price);
             update_token_price(token_base, price, timestamp).await?;
         }
         (true,false) => {
             // token_quote is quoting, calculate price of token_base
             let price = (pair_swap.base_amount as f64/10f32.powi(token_base.decimals) as f64)/ (pair_swap.quote_amount as f64/10f32.powi(token_quote.decimals) as f64);
-            log::info!("Opt 1 - Price: {}",price);
             update_token_price(token_quote, price, timestamp).await?;
         }
         (true, true) => {
             // Both tokens are quoting, assign reciprocal prices
             let base_price = (pair_swap.base_amount as f64/10f32.powi(token_base.decimals) as f64) / (pair_swap.quote_amount as f64/10f32.powi(token_quote.decimals) as f64);
             let quote_price = (pair_swap.quote_amount as f64/10f32.powi(token_quote.decimals) as f64) / (pair_swap.base_amount as f64/10f32.powi(token_base.decimals) as f64);
-            log::info!("Opt 3 - Price: {} - {}",base_price, quote_price);
             update_token_price(token_base, base_price, timestamp).await?;
             update_token_price(token_quote, quote_price, timestamp).await?;
         }
