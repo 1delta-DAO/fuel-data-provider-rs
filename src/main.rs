@@ -2,6 +2,7 @@
 
 use std::env;
 use crate::config::CONFIG;
+use crate::domain::service::cleanup::expired_data_manager::ExpiredDataManager;
 use crate::ports::blockchain::TxSync;
 use crate::ports::db::database_manager::DB_MANAGER;
 
@@ -27,6 +28,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         log::info!("Starting TX Sync service - Runner 1 ...");
         match TxSync::synchronize_transactions(1).await{
             Ok(_) => println!("Synchronization finished successfully."),
+            Err(e) => eprintln!("Error occurred: {}", e),
+        }
+    });
+
+    let data_cleanup_handle = tokio::spawn(async {
+       log::info!("Starting data cleanup job ...");
+        match ExpiredDataManager::cleanup_job().await {
+            Ok(_) => println!("Cleanup job finished successfully."),
             Err(e) => eprintln!("Error occurred: {}", e),
         }
     });
