@@ -99,7 +99,7 @@ impl BlockchainDataService{
                 drop(calc_window);
 
                 // Refresh the calculation window using the latest data
-                log::info!("Refreshing block range - provider query");
+                //log::info!("Refreshing block range - provider query");
                 let _ = BlockchainDataService::refresh_calc_data(BlockchainDataService::get_block_range(provider).await);
             }
         }

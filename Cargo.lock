@@ -1441,6 +1441,7 @@ dependencies = [
  "num-traits",
  "once_cell",
  "reqwest 0.12.12",
+ "rust_decimal",
  "sea-orm",
  "serde",
  "serde_json",

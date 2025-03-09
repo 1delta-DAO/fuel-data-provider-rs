@@ -23,6 +23,7 @@ uuid = { version = "1.11.0", features = ["v4","serde"] }
 sea-orm = { version = "1.1.2", features = [ "sqlx-postgres", "runtime-tokio-native-tls", "macros","with-chrono" ] }
 strum_macros = "0.26.4"
 futures = "0.3.31"
+rust_decimal = "1.36.0"
 
 [[bin]]
 name = "fuel_data_provider"

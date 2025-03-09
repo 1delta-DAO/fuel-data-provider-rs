@@ -5,10 +5,11 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use sea_orm::prelude::Decimal;
 use uuid::Uuid;
 
+#[derive(Clone, Debug)]
 pub struct VolumeDataEntity {
     pub timestamp: DateTime<Utc>,
     pub token_id: Uuid,
-    pub volume: u64,
+    pub volume: f64,
 }
 
 impl Entity<Model> for VolumeDataEntity {
@@ -16,7 +17,7 @@ impl Entity<Model> for VolumeDataEntity {
         Self {
             timestamp: model.timestamp.with_timezone(&Utc),
             token_id: model.token_id,
-            volume: model.volume.to_u64().unwrap(),
+            volume: model.volume.to_f64().unwrap(),
         }
     }
 
@@ -24,7 +25,7 @@ impl Entity<Model> for VolumeDataEntity {
         Model {
             timestamp: self.timestamp.into(),
             token_id: self.token_id,
-            volume: Decimal::from_u64(self.volume.clone()).unwrap(),
+            volume: Decimal::from_f64(self.volume.clone()).unwrap(),
         }
     }
 }
@@ -34,7 +35,7 @@ impl Default for VolumeDataEntity {
         Self {
             timestamp: Utc::now(),
             token_id: Uuid::new_v4(),
-            volume: 0,
+            volume: 0.0,
         }
     }
 }

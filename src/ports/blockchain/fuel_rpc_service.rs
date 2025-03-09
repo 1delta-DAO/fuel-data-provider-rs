@@ -199,7 +199,7 @@ impl FuelRpcService {
 
             // If we get here, we need to update the cache
             // Now we need to check the latest block from the blockchain
-            let latest_block_number = self.providers[0].latest_block_height().await?;
+            let mut latest_block_number = self.providers[0].latest_block_height().await?;
 
             if requested_block > latest_block_number {
                 log::info!("latest_block_number: {}", latest_block_number);
@@ -207,6 +207,10 @@ impl FuelRpcService {
                 return Err(fuels::types::errors::Error::Provider(
                     "Requested block is higher than the latest block".into()
                 ));
+            }
+
+            if latest_block_number - requested_block > 100 {
+                latest_block_number = requested_block + 100;
             }
 
             // Update cache from the last cached block (or requested block if cache is empty)

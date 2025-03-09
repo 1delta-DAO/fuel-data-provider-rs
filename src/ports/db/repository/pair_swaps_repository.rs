@@ -54,14 +54,14 @@ impl PairSwapsRepository {
         updated_sync_status.block_number = Set(block_number);
         updated_sync_status.block_time = Set(Some(block_time).map(|t| t.into()));
         updated_sync_status.updated_at = Set(Utc::now().into());
-        log::info!("Sync status: {:?}",updated_sync_status);
+        //log::info!("Sync status: {:?}",updated_sync_status);
         // Save updated SyncStatus within the transaction
         if updated_sync_status.update(&txn).await.is_err() {
             txn.rollback().await?;
             return Err(DbErr::Custom("Failed to update sync status".into()));
         }
 
-        log::info!("Sync status updated: block_number = {}, block_time = {}", block_number, block_time);
+        //log::info!("Sync status updated: block_number = {}, block_time = {}", block_number, block_time);
         // Commit transaction if all operations are successful
         txn.commit().await?;
 
