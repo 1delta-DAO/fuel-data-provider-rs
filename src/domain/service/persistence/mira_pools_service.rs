@@ -54,7 +54,7 @@ impl MiraPoolsService {
                     updated_at: Utc::now(),
                 };
 
-                println!("Pool not found, creating a new one...");
+                log::info!("Pool not found, creating a new one...");
                 match Self::create(mira_pool).await{
                     Ok(result)=>{
                         Ok(result)

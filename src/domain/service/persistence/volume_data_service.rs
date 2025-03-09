@@ -23,9 +23,15 @@ impl VolumeDataService {
 
         let timestamp_fixed: DateTime<FixedOffset> = volume_entity.timestamp.into();
 
+        //log::info!("COU: Volume record {:?}", volume_entity);
+
         if let Some(existing_record) = VolumeDataRepository::find_by_id(timestamp_fixed).await? {
 
             let mut existing_entity = VolumeDataEntity::from_model(&existing_record);
+
+            //log::info!("COU: Incremental volume update {} -> {}",
+            //    existing_entity.volume,
+            //    volume_entity.volume);
 
             existing_entity.volume += volume_entity.volume;
 
@@ -33,6 +39,7 @@ impl VolumeDataService {
             Ok(VolumeDataEntity::from_model(&updated_model))
         } else {
             let model = volume_entity.to_model();
+            //log::info!("COU: New volume record {:?}", model);
             let created_model = VolumeDataRepository::create(model.into_active_model()).await?;
             Ok(VolumeDataEntity::from_model(&created_model))
         }
