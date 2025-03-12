@@ -34,14 +34,14 @@ abigen!(
 
 impl TxSync{
     pub async fn synchronize_transactions(runner_id: u8) -> Result<(), Error> {
-        let provider = Provider::connect(CONFIG.default.rpc_url_one.as_str()).await?;
+        let provider_top = Provider::connect(CONFIG.default.rpc_url_one.as_str()).await?;
         let mut wallet = WalletUnlocked::new_random(None);
-        wallet.set_provider(provider.clone());
+        wallet.set_provider(provider_top.clone());
 
         //let mut start_block:u32 = provider.latest_block_height().await?; // get_start_block_number().await;
         let mut start_block:u32 = get_start_block_number().await;
         log::info!("TXS-{}: Starting from block: {}",runner_id,start_block);
-        let start_block_time = get_block_time_by_block_height(&provider, start_block).await;
+        let start_block_time = get_block_time_by_block_height(&provider_top, start_block).await;
 
         log::info!("TXS-{}: - Start block time: {:?}",runner_id,start_block_time);
 
@@ -50,6 +50,7 @@ impl TxSync{
         //let subgraph_service = SubgraphQueryService::new();
 
         loop {
+            let provider = Provider::connect(CONFIG.default.rpc_url_one.as_str()).await?;
             let mut current_block = provider.latest_block_height().await?;
 
             log::info!("TXS-{}: - Current block: {}",runner_id,current_block);

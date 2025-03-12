@@ -28,7 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         log::info!("Starting TX Sync service - Runner 1 ...");
         match TxSync::synchronize_transactions(1).await{
             Ok(_) => println!("Synchronization finished successfully."),
-            Err(e) => eprintln!("Error occurred: {}", e),
+            Err(e) => eprintln!("Top level - Error occurred: {}", e),
         }
     });
 
@@ -36,7 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
        log::info!("Starting data cleanup job ...");
         match ExpiredDataManager::cleanup_job().await {
             Ok(_) => println!("Cleanup job finished successfully."),
-            Err(e) => eprintln!("Error occurred: {}", e),
+            Err(e) => eprintln!("Top level - Error occurred: {}", e),
         }
     });
 
