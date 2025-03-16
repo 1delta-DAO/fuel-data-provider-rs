@@ -143,7 +143,7 @@ impl FuelRpcService {
 
         let start_time = Instant::now();
 
-        let concurrent_requests = 3;
+        let concurrent_requests = 6;
 
         let results = stream::iter(block_number_start..=block_number_end)
             .map(|block_number| {

@@ -61,7 +61,6 @@ impl TokenService {
         active_model.volume24 = Set(Decimal::from_f64(token_entity.volume_24).unwrap());
         active_model.updated_at = Set(Utc::now().into());
 
-        log::info!("Active Model: {:?}", active_model);
         let updated_model = TokenRepository::update(active_model).await?;
         Ok(TokenEntity::from_model(&updated_model))
     }
