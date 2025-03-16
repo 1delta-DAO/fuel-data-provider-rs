@@ -455,12 +455,8 @@ async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -
                             address: asset_id.to_string(),
                             symbol: token_symbol,
                             name: token_name,
-                            price: 0.0,
-                            volume_24: 0.0,
                             decimals: token_decimals as i32,
-                            created_at: Utc::now(),
-                            updated_at: Utc::now(),
-                            quoting: false,
+                            ..Default::default()
                         };
                         log::info!("All data ready to create new Token entity: {:?}",token_entity);
                         Ok(Some(TokenService::create(token_entity).await.unwrap()))
@@ -531,12 +527,8 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
                             address: asset_id.to_string(),
                             symbol: token_symbol,
                             name: token_name,
-                            price: 0.0,
-                            volume_24: 0.0,
                             decimals: token_decimals as i32,
-                            created_at: Utc::now(),
-                            updated_at: Utc::now(),
-                            quoting: false,
+                            ..Default::default()
                         };
                         log::info!("Mira - All data ready to create new Token entity: {:?}",token_entity);
                         Ok(Some(TokenService::create(token_entity).await.unwrap()))
@@ -568,12 +560,8 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
                                             address: asset_id.to_string(),
                                             symbol: token_symbol,
                                             name: token_name,
-                                            price: 0.0,
-                                            volume_24: 0.0,
                                             decimals: token_decimals as i32,
-                                            created_at: Utc::now(),
-                                            updated_at: Utc::now(),
-                                            quoting: false,
+                                            ..Default::default()
                                         };
                                         log::info!("Fuel Gateway - All data ready to create new Token entity: {:?}",token_entity);
                                         Ok(Some(TokenService::create(token_entity).await.unwrap()))

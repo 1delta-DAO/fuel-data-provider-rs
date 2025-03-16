@@ -14,6 +14,7 @@ pub struct Model {
     pub name: String,
     pub price: Decimal,
     pub volume24: Decimal,
+    pub price_change24: Decimal,
     pub decimals: i32,
     pub high_risk: bool,
     pub no_liquidity: bool,

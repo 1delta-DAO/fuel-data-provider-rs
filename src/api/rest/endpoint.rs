@@ -123,27 +123,60 @@ pub async fn get_tokens_by_address(params: AddressQueryParams) -> Result<impl Re
 //Trending assets
 
 pub async fn get_top_gainers(params: CountQueryParams) -> Result<impl Reply, Infallible> {
-    let trending_assets = mock_trending_assets(params.count);
-    Ok(warp::reply::with_status(
-        warp::reply::json(&trending_assets),
-        StatusCode::OK,
-    ))
+    match TokenService::find_biggest_gainers().await {
+        Ok(tokens) => {
+            let limited_tokens = tokens.into_iter().take(params.count).collect::<Vec<_>>();
+            Ok(warp::reply::with_status(
+                warp::reply::json(&limited_tokens),
+                StatusCode::OK,
+            ))
+        },
+        Err(err) => {
+            log::error!("Error fetching top gainers: {:?}", err);
+            Ok(warp::reply::with_status(
+                warp::reply::json(&"Internal server error"),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
+        }
+    }
 }
 
 pub async fn get_top_losers(params: CountQueryParams) -> Result<impl Reply, Infallible> {
-    let trending_assets = mock_trending_assets(params.count);
-    Ok(warp::reply::with_status(
-        warp::reply::json(&trending_assets),
-        StatusCode::OK,
-    ))
+    match TokenService::find_biggest_losers().await {
+        Ok(tokens) => {
+            let limited_tokens = tokens.into_iter().take(params.count).collect::<Vec<_>>();
+            Ok(warp::reply::with_status(
+                warp::reply::json(&limited_tokens),
+                StatusCode::OK,
+            ))
+        },
+        Err(err) => {
+            log::error!("Error fetching top losers: {:?}", err);
+            Ok(warp::reply::with_status(
+                warp::reply::json(&"Internal server error"),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
+        }
+    }
 }
 
 pub async fn get_top_volume(params: CountQueryParams) -> Result<impl Reply, Infallible> {
-    let trending_assets = mock_trending_assets(params.count);
-    Ok(warp::reply::with_status(
-        warp::reply::json(&trending_assets),
-        StatusCode::OK,
-    ))
+    match TokenService::find_highest_volume().await {
+        Ok(tokens) => {
+            let limited_tokens = tokens.into_iter().take(params.count).collect::<Vec<_>>();
+            Ok(warp::reply::with_status(
+                warp::reply::json(&limited_tokens),
+                StatusCode::OK,
+            ))
+        },
+        Err(err) => {
+            log::error!("Error fetching top volume tokens: {:?}", err);
+            Ok(warp::reply::with_status(
+                warp::reply::json(&"Internal server error"),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
+        }
+    }
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -161,53 +194,6 @@ pub struct AddressQueryParams {
 pub struct CountQueryParams {
     count: usize,
 }
-
-//Test trending assets
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct TrendingAsset {
-    pub address: String,
-    pub symbol: String,
-    pub price_change_24h: f64,
-    pub price: u64,
-    pub volume_24: u64,
-}
-
-/// Mock function returning trending assets
-fn mock_trending_assets(count: usize) -> Vec<TrendingAsset> {
-    let all_assets = vec![
-        TrendingAsset {
-            address: "f8f8b6283d7fa5b672b530cbb84fcccb4ff8dc40f8176ef4544ddb1f1952ad07".to_string(),
-            symbol: "ETH".to_string(),
-            price_change_24h: 12.5,
-            price: 5000,
-            volume_24: 100000,
-        },
-        TrendingAsset {
-            address: "33a6d90877f12c7954cca6d65587c25e9214c7bed2231c188981c7114c1bdb78".to_string(),
-            symbol: "USDF".to_string(),
-            price_change_24h: -8.3,
-            price: 3000,
-            volume_24: 200000,
-        },
-        TrendingAsset {
-            address: "286c479da40dc953bddc3bb4c453b608bba2e0ac483b077bd475174115395e6b".to_string(),
-            symbol: "USDC".to_string(),
-            price_change_24h: -8.3,
-            price: 3000,
-            volume_24: 200000,
-        },
-        TrendingAsset {
-            address: "286c479da40dc953bddc3bb4c453b608bba2e0ac483b077bd475174115395e6b".to_string(),
-            symbol: "USDT".to_string(),
-            price_change_24h: -8.3,
-            price: 3000,
-            volume_24: 200000,
-        },
-    ];
-
-    all_assets.into_iter().take(count).collect()
-}
-
 
 fn parse_datetime(datetime_str: &str) -> Option<DateTime<Utc>> {
     NaiveDateTime::parse_from_str(datetime_str, "%Y-%m-%dT%H:%M:%S")

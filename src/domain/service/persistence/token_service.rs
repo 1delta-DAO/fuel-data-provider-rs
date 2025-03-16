@@ -56,6 +56,14 @@ impl TokenService {
         Ok(TokenEntity::from_model(&updated_model))
     }
 
+    pub async fn update_price_change(token_entity: TokenEntity) -> Result<TokenEntity, DbErr> {
+        let mut active_model: token::ActiveModel = token_entity.to_model().into();
+        active_model.price_change24 = Set(Decimal::from_f32(token_entity.price_change24).unwrap());
+        active_model.updated_at = Set(Utc::now().into());
+        let updated_model = TokenRepository::update(active_model).await?;
+        Ok(TokenEntity::from_model(&updated_model))
+    }
+
     pub async fn update_volume(token_entity: TokenEntity) -> Result<TokenEntity, DbErr> {
         let mut active_model: token::ActiveModel = token_entity.to_model().into();
         active_model.volume24 = Set(Decimal::from_f64(token_entity.volume_24).unwrap());
@@ -63,5 +71,23 @@ impl TokenService {
 
         let updated_model = TokenRepository::update(active_model).await?;
         Ok(TokenEntity::from_model(&updated_model))
+    }
+
+    /// Returns tokens sorted by price change in ascending order (biggest losers first)
+    pub async fn find_biggest_losers() -> Result<Vec<TokenEntity>, DbErr> {
+        let models = TokenRepository::find_sorted_by_price_change_asc().await?;
+        Ok(models.into_iter().map(|model: token::Model| TokenEntity::from_model(&model)).collect())
+    }
+
+    /// Returns tokens sorted by price change in descending order (biggest gainers first)
+    pub async fn find_biggest_gainers() -> Result<Vec<TokenEntity>, DbErr> {
+        let models = TokenRepository::find_sorted_by_price_change_desc().await?;
+        Ok(models.into_iter().map(|model: token::Model| TokenEntity::from_model(&model)).collect())
+    }
+
+    /// Returns tokens sorted by trading volume in descending order (highest volume first)
+    pub async fn find_highest_volume() -> Result<Vec<TokenEntity>, DbErr> {
+        let models = TokenRepository::find_sorted_by_volume_desc().await?;
+        Ok(models.into_iter().map(|model: token::Model| TokenEntity::from_model(&model)).collect())
     }
 }
