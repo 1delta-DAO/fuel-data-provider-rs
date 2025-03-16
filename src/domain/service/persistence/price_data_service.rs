@@ -21,6 +21,11 @@ impl PriceDataService {
         Ok(models.into_iter().map(|model| PriceDataEntity::from_model(&model)).collect())
     }
 
+    pub async fn find_oldest_by_token_id(token_id: &Uuid) -> Result<Option<PriceDataEntity>, DbErr> {
+        let model = PriceDataRepository::find_oldest_by_token_id(token_id).await?;
+        Ok(model.map(|model| PriceDataEntity::from_model(&model)))
+    }
+
     pub async fn delete_expired() -> Result<u64, DbErr> {
         PriceDataRepository::delete_expired().await
     }

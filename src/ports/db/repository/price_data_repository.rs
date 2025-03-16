@@ -17,6 +17,16 @@ impl PriceDataRepository {
         Self::find_by_column_many(price_data::Column::TokenId, token_id.to_owned()).await
     }
 
+    pub async fn find_oldest_by_token_id(token_id: &Uuid) -> Result<Option<Model>, DbErr> {
+        use sea_orm::{EntityTrait, QueryFilter, QueryOrder, ColumnTrait};
+
+        price_data::Entity::find()
+            .filter(price_data::Column::TokenId.eq(token_id.to_owned()))
+            .order_by_asc(price_data::Column::Timestamp)
+            .one(&DB_MANAGER.get_connection().await.unwrap())
+            .await
+    }
+
     /// Deletes price data records older than the specified number of minutes
     pub async fn delete_expired() -> Result<u64, DbErr> {
         use sea_orm::{Condition, prelude::*};

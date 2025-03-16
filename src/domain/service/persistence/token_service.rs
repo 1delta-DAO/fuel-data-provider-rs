@@ -56,6 +56,14 @@ impl TokenService {
         Ok(TokenEntity::from_model(&updated_model))
     }
 
+    pub async fn update_price_change(token_entity: TokenEntity) -> Result<TokenEntity, DbErr> {
+        let mut active_model: token::ActiveModel = token_entity.to_model().into();
+        active_model.price_change24 = Set(Decimal::from_f32(token_entity.price_change24).unwrap());
+        active_model.updated_at = Set(Utc::now().into());
+        let updated_model = TokenRepository::update(active_model).await?;
+        Ok(TokenEntity::from_model(&updated_model))
+    }
+
     pub async fn update_volume(token_entity: TokenEntity) -> Result<TokenEntity, DbErr> {
         let mut active_model: token::ActiveModel = token_entity.to_model().into();
         active_model.volume24 = Set(Decimal::from_f64(token_entity.volume_24).unwrap());
