@@ -42,6 +42,7 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Token::Name).string().not_null())
                     .col(ColumnDef::new(Token::Price).decimal().not_null().default(0))
                     .col(ColumnDef::new(Token::Volume24).decimal().not_null().default(0))
+                    .col(ColumnDef::new(Token::PriceChange24).decimal().not_null().default(0))
                     .col(ColumnDef::new(Token::Decimals).unsigned().not_null())
                     .col(ColumnDef::new(Token::HighRisk).boolean().not_null().default(false))
                     .col(ColumnDef::new(Token::NoLiquidity).boolean().not_null().default(false))
@@ -260,6 +261,7 @@ pub enum Token {
     Name,
     Price,
     Volume24,
+    PriceChange24,
     Decimals,
     CreatedAt,
     UpdatedAt,
