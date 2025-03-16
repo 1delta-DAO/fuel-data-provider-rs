@@ -123,27 +123,63 @@ pub async fn get_tokens_by_address(params: AddressQueryParams) -> Result<impl Re
 //Trending assets
 
 pub async fn get_top_gainers(params: CountQueryParams) -> Result<impl Reply, Infallible> {
-    let trending_assets = mock_trending_assets(params.count);
-    Ok(warp::reply::with_status(
-        warp::reply::json(&trending_assets),
-        StatusCode::OK,
-    ))
+    match TokenService::find_biggest_gainers().await {
+        Ok(tokens) => {
+            // Ograniczamy liczbę zwracanych tokenów do wartości count
+            let limited_tokens = tokens.into_iter().take(params.count).collect::<Vec<_>>();
+            Ok(warp::reply::with_status(
+                warp::reply::json(&limited_tokens),
+                StatusCode::OK,
+            ))
+        },
+        Err(err) => {
+            log::error!("Error fetching top gainers: {:?}", err);
+            Ok(warp::reply::with_status(
+                warp::reply::json(&"Internal server error"),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
+        }
+    }
 }
 
 pub async fn get_top_losers(params: CountQueryParams) -> Result<impl Reply, Infallible> {
-    let trending_assets = mock_trending_assets(params.count);
-    Ok(warp::reply::with_status(
-        warp::reply::json(&trending_assets),
-        StatusCode::OK,
-    ))
+    match TokenService::find_biggest_losers().await {
+        Ok(tokens) => {
+            // Ograniczamy liczbę zwracanych tokenów do wartości count
+            let limited_tokens = tokens.into_iter().take(params.count).collect::<Vec<_>>();
+            Ok(warp::reply::with_status(
+                warp::reply::json(&limited_tokens),
+                StatusCode::OK,
+            ))
+        },
+        Err(err) => {
+            log::error!("Error fetching top losers: {:?}", err);
+            Ok(warp::reply::with_status(
+                warp::reply::json(&"Internal server error"),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
+        }
+    }
 }
 
 pub async fn get_top_volume(params: CountQueryParams) -> Result<impl Reply, Infallible> {
-    let trending_assets = mock_trending_assets(params.count);
-    Ok(warp::reply::with_status(
-        warp::reply::json(&trending_assets),
-        StatusCode::OK,
-    ))
+    match TokenService::find_highest_volume().await {
+        Ok(tokens) => {
+            // Ograniczamy liczbę zwracanych tokenów do wartości count
+            let limited_tokens = tokens.into_iter().take(params.count).collect::<Vec<_>>();
+            Ok(warp::reply::with_status(
+                warp::reply::json(&limited_tokens),
+                StatusCode::OK,
+            ))
+        },
+        Err(err) => {
+            log::error!("Error fetching top volume tokens: {:?}", err);
+            Ok(warp::reply::with_status(
+                warp::reply::json(&"Internal server error"),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
+        }
+    }
 }
 
 #[derive(Debug, serde::Deserialize)]
