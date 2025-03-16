@@ -1434,7 +1434,6 @@ dependencies = [
  "chrono",
  "config",
  "env_logger",
- "fuel-tx",
  "fuels",
  "futures",
  "log",

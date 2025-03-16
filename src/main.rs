@@ -2,7 +2,7 @@
 
 use std::env;
 use crate::config::CONFIG;
-use crate::domain::service::cleanup::expired_data_manager::ExpiredDataManager;
+use crate::domain::service::manager::{CalculationManager, ExpiredDataManager};
 use crate::ports::blockchain::TxSync;
 use crate::ports::db::database_manager::DB_MANAGER;
 
@@ -36,6 +36,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
        log::info!("Starting data cleanup job ...");
         match ExpiredDataManager::cleanup_job().await {
             Ok(_) => println!("Cleanup job finished successfully."),
+            Err(e) => eprintln!("Top level - Error occurred: {}", e),
+        }
+    });
+
+    let stats_calculation_handle = tokio::spawn(async {
+        log::info!("Starting stats calculation job ...");
+        match CalculationManager::calculate_stats_job().await {
+            Ok(_) => println!("Calculation job finished successfully."),
             Err(e) => eprintln!("Top level - Error occurred: {}", e),
         }
     });
