@@ -6,6 +6,8 @@ use crate::config::CONFIG;
 use crate::ports::db::database_manager::DB_MANAGER;
 use crate::ports::db::model::price_data;
 use crate::ports::db::model::price_data::Model;
+use sea_orm::{Condition, prelude::*};
+use chrono::{Utc, Duration};
 
 pub struct PriceDataRepository;
 
@@ -29,8 +31,6 @@ impl PriceDataRepository {
 
     /// Deletes price data records older than the specified number of minutes
     pub async fn delete_expired() -> Result<u64, DbErr> {
-        use sea_orm::{Condition, prelude::*};
-        use chrono::{Utc, Duration};
 
         let minutes = CONFIG.default.calculation_window as i64;
 
