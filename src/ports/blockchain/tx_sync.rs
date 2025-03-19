@@ -131,12 +131,13 @@ impl TxSync{
                                             {
                                                 add_volume(token_base,token_quote,&pair_swap).await.unwrap();
                                                 add_price(token_base,token_quote,&pair_swap).await.unwrap();
+                                                pair_swaps_vec.push(pair_swap);
+
                                             }
                                             else{
                                                 log::info!("Amount: {},{} : {},{}",swap.swap_event.asset_0_in,swap.swap_event.asset_0_in,swap.swap_event.asset_1_out,swap.swap_event.asset_1_out);
                                             }
 
-                                            pair_swaps_vec.push(pair_swap);
 
                                         }
                                     }
@@ -188,10 +189,9 @@ pub async fn add_volume(
     };
 
 
-    let base_amount = rust_decimal::Decimal::from_f64(
-        pair_swap.base_amount as f64 / 10f32.powi(token_base.decimals) as f64
-    )
-        .unwrap().round_dp(token_base.decimals as u32).to_f64().unwrap();
+    let base_amount = Converter::round_f64(
+        pair_swap.base_amount as f64 / 10f32.powi(token_base.decimals) as f64,
+    token_base.decimals);
 
     let volume_base = VolumeDataEntity {
         timestamp,
@@ -209,10 +209,9 @@ pub async fn add_volume(
         log::info!("Volume base added: {:?}", volume_base)
     }
 
-    let quote_amount = rust_decimal::Decimal::from_f64(
+    let quote_amount = Converter::round_f64(
         pair_swap.quote_amount as f64 / 10f32.powi(token_quote.decimals) as f64
-    )
-        .unwrap().round_dp(token_quote.decimals as u32).to_f64().unwrap();
+    ,token_quote.decimals);
 
     let volume_quote = VolumeDataEntity {
         timestamp,
@@ -260,11 +259,11 @@ pub async fn add_price(
     let base_price = Converter::round_f64(
         (pair_swap.base_amount as f64/10f32.powi(token_base.decimals) as f64)
             /(pair_swap.quote_amount as f64/10f32.powi(token_quote.decimals) as f64),
-        token_base.decimals);
+        token_quote.decimals);
     let quote_price = Converter::round_f64(
         (pair_swap.quote_amount as f64/10f32.powi(token_quote.decimals) as f64)
             /(pair_swap.base_amount as f64/10f32.powi(token_base.decimals) as f64),
-        token_quote.decimals);
+        token_base.decimals);
 
 
     match (token_base.quoting, token_quote.quoting) {
