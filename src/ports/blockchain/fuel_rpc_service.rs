@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
+use chrono::{DateTime, Utc};
 use fuels::{
     accounts::provider::Provider,
 };
@@ -10,6 +11,7 @@ use fuels::tx::Receipt;
 use fuels::types::{BlockHeight, ContractId};
 use futures::{stream, StreamExt};
 use crate::config::CONFIG;
+use crate::ports::blockchain::blockchain_data_service::BlockchainDataService;
 use crate::ports::blockchain::fuel_model::Swap;
 use crate::ports::blockchain::tx_sync::SwapEvent;
 
@@ -218,10 +220,13 @@ impl FuelRpcService {
             // Update cache from the last cached block (or requested block if cache is empty)
             let start_block = latest_cached_block.map(|b| b + 1).unwrap_or(requested_block);
 
+            let cache_start_time = BlockchainDataService::get_block_time(&self.providers[0].clone(), &(start_block as u64)).await.unwrap();
+
             log::info!(
-                "Updating cache from block {} to {}",
+                "Updating cache from block {} to {} - we are {} minutes behind",
                 start_block,
-                latest_block_number
+                latest_block_number,
+                Self::minutes_from_now(cache_start_time).unwrap()
             );
 
             self.get_logs_from_block_range(start_block, latest_block_number).await;
@@ -249,5 +254,18 @@ impl FuelRpcService {
     pub async fn remove_from_cache(&self, block_number: u32){
         let mut cache = self.cache.lock().unwrap();
             cache.remove(&block_number.to_string());
+    }
+
+
+    pub fn minutes_from_now(date_time: DateTime<Utc>) -> Result<i64, chrono::ParseError> {
+
+        //let date_time_utc = date_time.with_timezone(&Utc);
+
+        let now = Utc::now();
+
+        let duration = now.signed_duration_since(date_time);
+        let minutes = duration.num_minutes();
+
+        Ok(minutes)
     }
 }

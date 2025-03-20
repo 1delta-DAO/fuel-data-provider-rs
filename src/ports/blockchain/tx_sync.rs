@@ -18,7 +18,6 @@ use crate::domain::utils::Converter;
 use crate::ports::blockchain::blockchain_data_service::BlockchainDataService;
 use crate::ports::blockchain::fuel_model::Pool;
 use crate::ports::blockchain::FuelRpcService;
-use crate::ports::db::model::token::Column::Price;
 
 pub struct TxSync;
 
@@ -52,7 +51,7 @@ impl TxSync{
 
         loop {
             let provider = Provider::connect(CONFIG.default.rpc_url_one.as_str()).await?;
-            let mut current_block = provider.latest_block_height().await?;
+            let current_block = provider.latest_block_height().await?;
 
             log::info!("TXS-{}: - Current block: {}",runner_id,current_block);
 
@@ -231,9 +230,9 @@ pub async fn add_volume(
             token_quote.id, err
         );
         return Err(err);
-    }else{
+    }/*else{
         log::info!("Volume quote added: {:?}", volume_quote)
-    }
+    }*/
 
     Ok(())
 }
@@ -344,7 +343,7 @@ async fn update_token_price(token: &TokenEntity, new_price: f64, timestamp: Date
         .unwrap().round_dp(token.decimals as u32).to_f64().unwrap();
 
     token_update.price = new_price;
-    let updated_token = TokenService::update_price(token_update).await?;
+    //let updated_token = TokenService::update_price(token_update).await?;
     let price_data = PriceDataEntity {
         id: Uuid::new_v4(),
         token_id: token.id,
@@ -660,7 +659,7 @@ async fn get_mira_pool_metadata(mut pool: MiraPoolsEntity) -> MiraPoolsEntity {
                             //log::info!("Updating pool metadata {:?}", pool);
 
                             match MiraPoolsService::update(pool.clone()).await {
-                                Ok(result) => {
+                                Ok(_result) => {
                                     //log::info!("Update successful: {:?}", result);
                                 }
                                 Err(err) => {

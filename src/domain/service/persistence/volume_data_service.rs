@@ -1,12 +1,8 @@
 use chrono::{DateTime, FixedOffset, Timelike};
-use num_traits::FromPrimitive;
 use sea_orm::{DbErr, IntoActiveModel};
-use sea_orm::prelude::Decimal;
 use uuid::Uuid;
 use crate::domain::entity::entity::Entity;
 use crate::domain::entity::VolumeDataEntity;
-use crate::ports::db::model::volume_data;
-use crate::ports::db::model::volume_data::Model;
 use crate::ports::db::repository::{CrudRepository, VolumeDataRepository};
 
 pub struct VolumeDataService;
@@ -31,9 +27,9 @@ impl VolumeDataService {
 
             let new_volume = existing_entity.volume + volume_entity.volume;
 
-            log::info!("COU: Incremental volume update {} -> {} = {}",
+            /*log::info!("COU: Incremental volume update {} -> {} = {}",
                existing_entity.volume,
-               volume_entity.volume,new_volume);
+               volume_entity.volume,new_volume);*/
 
             existing_entity.volume = new_volume;
 
@@ -42,7 +38,7 @@ impl VolumeDataService {
             Ok(VolumeDataEntity::from_model(&updated_model))
         } else {
             let model = volume_entity.to_model();
-            log::info!("COU: New volume record {:?}", model);
+            //log::info!("COU: New volume record {:?}", model);
             let created_model = VolumeDataRepository::create(model.into_active_model()).await?;
             Ok(VolumeDataEntity::from_model(&created_model))
         }

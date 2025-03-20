@@ -37,7 +37,7 @@ impl VolumeDataRepository {
 
     /// Deletes volume data records older than the specified number of minutes
     pub async fn delete_expired() -> Result<u64, DbErr> {
-        use sea_orm::{DeleteResult, Condition, prelude::*};
+        use sea_orm::{Condition, prelude::*};
         use chrono::{Utc, Duration};
 
         let minutes = CONFIG.default.calculation_window as i64;
