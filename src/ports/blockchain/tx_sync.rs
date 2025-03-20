@@ -188,10 +188,13 @@ pub async fn add_volume(
         }
     };
 
-
     let base_amount = Converter::round_f64(
         pair_swap.base_amount as f64 / 10f32.powi(token_base.decimals) as f64,
     token_base.decimals);
+
+    //log::info!("PairSwaps: {:?}", pair_swap);
+    //log::info!("BaseToken: {:?}",token_base);
+    //log::info!("BaseAmount: {}",base_amount);
 
     let volume_base = VolumeDataEntity {
         timestamp,
@@ -205,13 +208,16 @@ pub async fn add_volume(
             token_base.id, err
         );
         return Err(err);
-    }else{
+    }/*else{
         log::info!("Volume base added: {:?}", volume_base)
-    }
+    }*/
 
     let quote_amount = Converter::round_f64(
         pair_swap.quote_amount as f64 / 10f32.powi(token_quote.decimals) as f64
     ,token_quote.decimals);
+
+    //log::info!("QuoteToken: {:?}",token_quote);
+    //log::info!("QuoteAmount: {}",quote_amount);
 
     let volume_quote = VolumeDataEntity {
         timestamp,
