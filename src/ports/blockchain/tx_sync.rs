@@ -129,7 +129,7 @@ impl TxSync{
                                             if swap.swap_event.asset_0_in !=0
                                             {
                                                 add_volume(token_base,token_quote,&pair_swap).await.unwrap();
-                                                add_price(token_base,token_quote,&pair_swap).await.unwrap();
+                                                add_price_v2(token_base,token_quote,&pair_swap).await.unwrap();
                                                 pair_swaps_vec.push(pair_swap);
 
                                             }
@@ -334,16 +334,109 @@ pub async fn add_price(
     Ok(())
 }
 
+pub async fn add_price_v2(
+    token_base: &TokenEntity,
+    token_quote: &TokenEntity,
+    pair_swap: &PairSwapsEntity,
+) -> Result<(), DbErr> {
+    let timestamp = match pair_swap.block_time {
+        Some(time) => time,
+        None => {
+            log::error!("Missing block_time for PairSwapsEntity: {:?}", pair_swap);
+            return Err(DbErr::Custom("Missing block_time".to_string()));
+        }
+    };
+
+    log::info!(
+        "Adding price for {}/{}: {}/{} : {}/{} : {}/{}",
+        token_base.symbol,
+        token_quote.symbol,
+        pair_swap.base_amount,
+        pair_swap.quote_amount,
+        token_base.decimals,
+        token_quote.decimals,
+        token_base.quoting,
+        token_quote.quoting);
+
+
+    // Używamy konsekwentnie f64 dla wszystkich obliczeń
+    let base_amount_decimal = pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals);
+    let quote_amount_decimal = pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals);
+
+    // Cena base_token wyrażona w quote_token (ile quote_token za 1 base_token)
+    let base_price = Converter::round_f64(
+        quote_amount_decimal / base_amount_decimal,
+        token_quote.decimals
+    );
+
+    // Cena quote_token wyrażona w base_token (ile base_token za 1 quote_token)
+    let quote_price = Converter::round_f64(
+        base_amount_decimal / quote_amount_decimal,
+        token_base.decimals
+    );
+
+    log::info!(
+        "Calculated prices - base_price: {} {}/{}, quote_price: {} {}/{}",
+        base_price, token_quote.symbol, token_base.symbol,
+        quote_price, token_base.symbol, token_quote.symbol
+    );
+
+    match (token_base.quoting, token_quote.quoting) {
+        (false, true) => {
+            // token_quote jest tokenem kwotowanym (quote token), aktualizujemy cenę token_base
+            update_token_price(token_base, base_price, timestamp).await?;
+        }
+        (true, false) => {
+            // token_base jest tokenem kwotowanym (quote token), aktualizujemy cenę token_quote
+            update_token_price(token_quote, quote_price, timestamp).await?;
+        }
+        (true, true) => {
+            // Oba tokeny są kwotowane, aktualizujemy obie ceny
+            update_token_price(token_base, quote_price, timestamp).await?;
+            update_token_price(token_quote, base_price, timestamp).await?;
+        }
+        (false, false) => {
+            log::warn!(
+                "Price update: neither {} nor {} are quoting tokens",
+                token_base.symbol,
+                token_quote.symbol);
+
+            // Sprawdzamy, który token ma aktualniejszą cenę
+            if token_base.price > 0.0 && token_quote.price > 0.0 {
+                if token_base.updated_at > token_quote.updated_at {
+                    // Base token ma nowszą cenę, używamy jej do obliczenia ceny quote token
+                    update_token_price(token_quote, base_price, timestamp).await?;
+                } else {
+                    // Quote token ma nowszą cenę, używamy jej do obliczenia ceny base token
+                    update_token_price(token_base, quote_price, timestamp).await?;
+                }
+            } else if token_base.price > 0.0 {
+                // Tylko base_token ma cenę, używamy jej do obliczenia ceny quote_token
+                update_token_price(token_quote, base_price, timestamp).await?;
+            } else if token_quote.price > 0.0 {
+                // Tylko quote_token ma cenę, używamy jej do obliczenia ceny base_token
+                update_token_price(token_base, quote_price, timestamp).await?;
+            } else {
+                log::warn!(
+                    "Skipping price update: neither {} nor {} are quoting tokens and neither has a price.",
+                    token_base.symbol,
+                    token_quote.symbol
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
 async fn update_token_price(token: &TokenEntity, new_price: f64, timestamp: DateTime<Utc>) -> Result<(), DbErr> {
     let mut token_update = token.clone();
     token_update.updated_at = Utc::now();
 
-    let new_price_rounded = rust_decimal::Decimal::from_f64(
-        new_price)
-        .unwrap().round_dp(token.decimals as u32).to_f64().unwrap();
+    let new_price_rounded = Converter::round_f64(
+        new_price,token.decimals);
 
     token_update.price = new_price;
-    //let updated_token = TokenService::update_price(token_update).await?;
+    let updated_token = TokenService::update_price(token_update).await?;
     let price_data = PriceDataEntity {
         id: Uuid::new_v4(),
         token_id: token.id,

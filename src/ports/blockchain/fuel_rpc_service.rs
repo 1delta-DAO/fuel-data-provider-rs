@@ -15,15 +15,6 @@ use crate::ports::blockchain::blockchain_data_service::BlockchainDataService;
 use crate::ports::blockchain::fuel_model::Swap;
 use crate::ports::blockchain::tx_sync::SwapEvent;
 
-#[derive(Debug, Clone)]
-pub struct LogEvent {
-    pub transaction_hash: String,
-    pub block_number: u32,
-    pub contract_id: String,
-    pub data: Vec<u8>,
-}
-
-
 #[repr(u64)]
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum MiraEvent {
