@@ -37,11 +37,11 @@ impl CalculationManager {
                 if token_opening_price.is_some() {
                     let opening_price = Converter::round_f64(token_opening_price.unwrap().price,token.decimals);
                     let current_price = Converter::round_f64(token.price.clone(),token.decimals);
-                    //log::info!("Opening price: {}", opening_price);
-                    //log::info!("Current price: {}", current_price);
+                    log::info!("Opening price: {}", opening_price);
+                    log::info!("Current price: {}", current_price);
                     let price_change24 = (((current_price - opening_price) / opening_price) * 100.0) as f32;
                     token.price_change24 = Converter::round_f32(price_change24,2);
-                    //log::info!("Price change 24: {}", token.price_change24);
+                    log::info!("Price change 24: {}", token.price_change24);
                 }
                 else {
                     token.price_change24 = 0.0;
