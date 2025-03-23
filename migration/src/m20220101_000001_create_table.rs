@@ -202,9 +202,15 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(VolumeData::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(VolumeData::Timestamp).timestamp_with_time_zone().not_null().primary_key().default(Expr::cust("NOW()")))
+                    .col(ColumnDef::new(VolumeData::Timestamp).timestamp_with_time_zone().not_null())
                     .col(ColumnDef::new(VolumeData::TokenId).uuid().not_null())
                     .col(ColumnDef::new(VolumeData::Volume).decimal().not_null().default(0))
+                    .primary_key(
+                        Index::create()
+                            .name("pk_volume_data")
+                            .col(VolumeData::Timestamp)
+                            .col(VolumeData::TokenId)
+                    )
                     .foreign_key(
                         ForeignKey::create()
                             .from(VolumeData::Table, VolumeData::TokenId)

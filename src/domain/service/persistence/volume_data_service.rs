@@ -1,12 +1,8 @@
 use chrono::{DateTime, FixedOffset, Timelike};
-use num_traits::FromPrimitive;
 use sea_orm::{DbErr, IntoActiveModel};
-use sea_orm::prelude::Decimal;
 use uuid::Uuid;
 use crate::domain::entity::entity::Entity;
 use crate::domain::entity::VolumeDataEntity;
-use crate::ports::db::model::volume_data;
-use crate::ports::db::model::volume_data::Model;
 use crate::ports::db::repository::{CrudRepository, VolumeDataRepository};
 
 pub struct VolumeDataService;
@@ -21,19 +17,22 @@ impl VolumeDataService {
             .with_nanosecond(0)
             .unwrap();
 
-        let timestamp_fixed: DateTime<FixedOffset> = volume_entity.timestamp.into();
+        //let timestamp_fixed: DateTime<FixedOffset> = volume_entity.timestamp.into();
 
         //log::info!("COU: Volume record {:?}", volume_entity);
 
-        if let Some(existing_record) = VolumeDataRepository::find_by_id(timestamp_fixed).await? {
+        if let Some(existing_record) = VolumeDataRepository::find_by_timestamp_and_token_id(&volume_entity.timestamp,&volume_entity.token_id).await? {
 
             let mut existing_entity = VolumeDataEntity::from_model(&existing_record);
 
-            //log::info!("COU: Incremental volume update {} -> {}",
-            //    existing_entity.volume,
-            //    volume_entity.volume);
+            let new_volume = existing_entity.volume + volume_entity.volume;
 
-            existing_entity.volume += volume_entity.volume;
+            /*log::info!("COU: Incremental volume update {} -> {} = {}",
+               existing_entity.volume,
+               volume_entity.volume,new_volume);*/
+
+            existing_entity.volume = new_volume;
+
 
             let updated_model = VolumeDataRepository::update(existing_entity.to_model().into_active_model()).await?;
             Ok(VolumeDataEntity::from_model(&updated_model))
@@ -48,6 +47,20 @@ impl VolumeDataService {
     pub async fn find_by_token_id(token_id: &Uuid) -> Result<Vec<VolumeDataEntity>, DbErr> {
         let models = VolumeDataRepository::find_by_token_id(token_id).await?;
         Ok(models.into_iter().map(|model| VolumeDataEntity::from_model(&model)).collect())
+    }
+
+    /// Finds volume data by timestamp and token_id
+    pub async fn find_by_timestamp_and_token_id(
+        timestamp: &DateTime<FixedOffset>,
+        token_id: &Uuid
+    ) -> Result<Option<VolumeDataEntity>, DbErr> {
+        // Convert FixedOffset to UTC DateTime for repository call
+        let timestamp_utc = timestamp.with_timezone(&chrono::Utc);
+
+        let result = VolumeDataRepository::find_by_timestamp_and_token_id(&timestamp_utc, token_id).await?;
+
+        // Convert the model to entity if found
+        Ok(result.map(|model| VolumeDataEntity::from_model(&model)))
     }
 
     pub async fn delete_expired() -> Result<u64, DbErr> {

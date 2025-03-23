@@ -54,7 +54,7 @@ impl BlockchainDataService{
         let sync_status = SyncStatusService::get_status()
             .await.unwrap().ok_or("No sync status service found.").unwrap();
 
-        let mut start_block_number: u64;
+        let start_block_number: u64;
         let mut start_block_time: Option<DateTime<Utc>>;
 
         let end_block_number = provider.latest_block_height().await.unwrap() as u64;

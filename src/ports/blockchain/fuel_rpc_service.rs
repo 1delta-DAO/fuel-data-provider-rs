@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
+use chrono::{DateTime, Utc};
 use fuels::{
     accounts::provider::Provider,
 };
@@ -10,17 +11,9 @@ use fuels::tx::Receipt;
 use fuels::types::{BlockHeight, ContractId};
 use futures::{stream, StreamExt};
 use crate::config::CONFIG;
+use crate::ports::blockchain::blockchain_data_service::BlockchainDataService;
 use crate::ports::blockchain::fuel_model::Swap;
 use crate::ports::blockchain::tx_sync::SwapEvent;
-
-#[derive(Debug, Clone)]
-pub struct LogEvent {
-    pub transaction_hash: String,
-    pub block_number: u32,
-    pub contract_id: String,
-    pub data: Vec<u8>,
-}
-
 
 #[repr(u64)]
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -56,10 +49,10 @@ impl FuelRpcService {
 
         let provider1= Provider::connect(CONFIG.default.rpc_url_one.as_str()).await?;
         let provider2= Provider::connect(CONFIG.default.rpc_url_two.as_str()).await?;
-        let provider3= Provider::connect(CONFIG.default.rpc_url_three.as_str()).await?;
+        //let provider3= Provider::connect(CONFIG.default.rpc_url_three.as_str()).await?;
 
         Ok(FuelRpcService {
-            providers: vec![provider1,provider2, provider3],
+            providers: vec![provider1,provider2/*, provider3*/],
             cache: Arc::new(Mutex::new(HashMap::new()))
         })
     }
@@ -143,7 +136,7 @@ impl FuelRpcService {
 
         let start_time = Instant::now();
 
-        let concurrent_requests = 6;
+        let concurrent_requests = 2;
 
         let results = stream::iter(block_number_start..=block_number_end)
             .map(|block_number| {
@@ -156,6 +149,8 @@ impl FuelRpcService {
                         },
                         Err(e) => {
                             log::error!("Error processing block {}: {:?}", block_number, e);
+                            //To not break processing, but only skip block
+                            //return Ok(Vec::new())
                             Err(e)
                         }
                     }
@@ -216,10 +211,13 @@ impl FuelRpcService {
             // Update cache from the last cached block (or requested block if cache is empty)
             let start_block = latest_cached_block.map(|b| b + 1).unwrap_or(requested_block);
 
+            let cache_start_time = BlockchainDataService::get_block_time(&self.providers[0].clone(), &(start_block as u64)).await.unwrap();
+
             log::info!(
-                "Updating cache from block {} to {}",
+                "Updating cache from block {} to {} - we are {} minutes behind",
                 start_block,
-                latest_block_number
+                latest_block_number,
+                Self::minutes_from_now(cache_start_time).unwrap()
             );
 
             self.get_logs_from_block_range(start_block, latest_block_number).await;
@@ -247,5 +245,18 @@ impl FuelRpcService {
     pub async fn remove_from_cache(&self, block_number: u32){
         let mut cache = self.cache.lock().unwrap();
             cache.remove(&block_number.to_string());
+    }
+
+
+    pub fn minutes_from_now(date_time: DateTime<Utc>) -> Result<i64, chrono::ParseError> {
+
+        //let date_time_utc = date_time.with_timezone(&Utc);
+
+        let now = Utc::now();
+
+        let duration = now.signed_duration_since(date_time);
+        let minutes = duration.num_minutes();
+
+        Ok(minutes)
     }
 }
