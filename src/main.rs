@@ -25,26 +25,59 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _ = DB_MANAGER.initialize().await;
 
     let tx_sync_handle = tokio::spawn(async{
-        log::info!("Starting TX Sync service - Runner 1 ...");
-        match TxSync::synchronize_transactions(1).await{
-            Ok(_) => println!("Synchronization finished successfully."),
-            Err(e) => eprintln!("Top level - Error occurred: {}", e),
+        let mut retry_count = 0;
+        loop{
+            log::info!("Starting TX Sync service ...");
+            match TxSync::synchronize_transactions(1).await{
+                Ok(_) => {
+                    retry_count = 0;
+                    println!("Synchronization finished successfully.");
+                },
+                Err(e) => {
+                    retry_count += 1;
+                    eprintln!("Top level - Error occurred: {}", e);
+                    println!("Retrying sync service job in {} seconds", calculate_backoff(retry_count));
+                },
+            }
+            tokio::time::sleep(tokio::time::Duration::from_secs(calculate_backoff(retry_count))).await;
         }
     });
 
     let data_cleanup_handle = tokio::spawn(async {
-       log::info!("Starting data cleanup job ...");
-        match ExpiredDataManager::cleanup_job().await {
-            Ok(_) => println!("Cleanup job finished successfully."),
-            Err(e) => eprintln!("Top level - Error occurred: {}", e),
+        let mut retry_count = 0;
+        loop{
+            log::info!("Starting data cleanup job ...");
+            match ExpiredDataManager::cleanup_job().await {
+                Ok(_) => {
+                    retry_count = 0;
+                    println!("Cleanup job finished successfully.");
+                },
+                Err(e) => {
+                    retry_count += 1;
+                    eprintln!("Top level - Error occurred: {}", e);
+                    println!("Retrying data cleanup job in {} seconds", calculate_backoff(retry_count));
+                },
+            }
+            tokio::time::sleep(tokio::time::Duration::from_secs(calculate_backoff(retry_count))).await;
         }
     });
 
     let stats_calculation_handle = tokio::spawn(async {
-        log::info!("Starting stats calculation job ...");
-        match CalculationManager::calculate_stats_job().await {
-            Ok(_) => println!("Calculation job finished successfully."),
-            Err(e) => eprintln!("Top level - Error occurred: {}", e),
+        let mut retry_count = 0;
+        loop{
+            log::info!("Starting stats calculation job ...");
+            match CalculationManager::calculate_stats_job().await {
+                Ok(_) => {
+                    retry_count = 0;
+                    println!("Calculation job finished successfully.");
+                },
+                Err(e) => {
+                    retry_count += 1;
+                    eprintln!("Top level - Error occurred: {}", e);
+                    println!("Retrying stats calculation job in {} seconds", calculate_backoff(retry_count));
+                },
+            }
+            tokio::time::sleep(tokio::time::Duration::from_secs(calculate_backoff(retry_count))).await;
         }
     });
 
@@ -65,4 +98,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+fn calculate_backoff(retry: u32) -> u64 {
+    std::cmp::min(
+        5 * 60, // 5 minutes
+        2u64.saturating_pow(retry) * 5 // 5, 10, 20, 40, 80, 160
+    )
 }

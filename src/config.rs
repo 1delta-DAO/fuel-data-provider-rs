@@ -21,6 +21,7 @@ pub struct DefaultConfig {
     pub rpc_url_three: String,
     pub tx_log_start_block_number: u64,
     pub calculation_window: u16,
+    pub api_query_sleep_time: u16,
     pub cdi_fuel_token_gateway: String,
     pub cdi_fuel_token_gateway_dependency: String,
     pub cdi_mira_token_gateway: String,
@@ -52,6 +53,7 @@ pub enum EnvVar {
     RpcUrlThree,
     TxLogStartBlockNumber,
     CalculationWindow,
+    ApiQuerySleepTime,
     CdiFuelTokenGateway,
     CdiFuelTokenGatewayDependency,
     CdiMiraTokenGateway,
@@ -81,6 +83,7 @@ impl fmt::Display for EnvVar {
             EnvVar::RpcUrlThree => "RPC_URL_THREE",
             EnvVar::TxLogStartBlockNumber => "TX_LOG_START_BLOCK_NUMBER",
             EnvVar::CalculationWindow => "CALCULATION_WINDOW",
+            EnvVar::ApiQuerySleepTime => "API_QUERY_SLEEP_TIME",
             EnvVar::CdiFuelTokenGateway => "CDI_FUEL_TOKEN_GATEWAY",
             EnvVar::CdiFuelTokenGatewayDependency => "CDI_FUEL_TOKEN_GATEWAY_DEPENDENCY",
             EnvVar::CdiMiraTokenGateway => "CDI_MIRA_TOKEN_GATEWAY",
@@ -148,6 +151,7 @@ pub fn load_config_from_env_or_file() -> Result<AppConfig, Box<dyn Error>> {
         EnvVar::TxLogStartBlockNumber.get_value(config.default.tx_log_start_block_number);
     config.default.calculation_window =
         EnvVar::CalculationWindow.get_value(config.default.calculation_window);
+    config.default.api_query_sleep_time = EnvVar::ApiQuerySleepTime.get_value(config.default.api_query_sleep_time);
     config.default.cdi_fuel_token_gateway = EnvVar::CdiFuelTokenGateway.get_value(config.default.cdi_fuel_token_gateway.clone());
     config.default.cdi_fuel_token_gateway_dependency = EnvVar::CdiFuelTokenGatewayDependency.get_value(config.default.cdi_fuel_token_gateway_dependency.clone());
     config.default.cdi_mira_token_gateway = EnvVar::CdiMiraTokenGateway.get_value(config.default.cdi_mira_token_gateway.clone());
