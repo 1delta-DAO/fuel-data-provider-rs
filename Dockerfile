@@ -20,7 +20,20 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Forc (compiler for Sway)
-RUN cargo install forc --locked
+# RUN cargo install forc --locked
+
+# Install fuelup (official toolchain manager for Sway/Fuel)
+RUN curl https://install.fuel.network | sh && \
+    ln -s $HOME/.fuelup/bin/fuelup /usr/local/bin/fuelup && \
+    ln -s $HOME/.fuelup/bin/forc /usr/local/bin/forc && \
+    ln -s $HOME/.fuelup/bin/fuel-core /usr/local/bin/fuel-core
+
+# Install custom toolchain using fuelup
+
+RUN fuelup toolchain new 1delta
+RUN fuelup default 1delta
+
+RUN fuelup component add fuel-core@0.41.6
 
 # Determine architecture and set up symlinks if needed
 RUN if [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then \
@@ -69,12 +82,9 @@ RUN if [ -d "resources/abi" ]; then \
         echo "Compiling fuel_token_gateway contracts..." && \
         forc clean && \
         forc build && \
-        # Sprawdź czy wygenerowało plik ABI w katalogu out/debug
         if [ ! -f "out/debug/bridge_fungible_token-abi.json" ]; then \
           echo "ERROR: ABI file not generated at expected path: out/debug/bridge_fungible_token-abi.json" && \
-          # Spróbuj znaleźć wygenerowane pliki ABI
           find out -name "*-abi.json" -type f && \
-          # Jeśli pliku nie ma, ale istnieje wersja release, skopiuj ją do debug
           if [ -f "out/release/bridge_fungible_token-abi.json" ]; then \
             mkdir -p out/debug && \
             cp out/release/bridge_fungible_token-abi.json out/debug/ && \
@@ -85,14 +95,12 @@ RUN if [ -d "resources/abi" ]; then \
         fi; \
         cd ../../..; \
       fi; \
-      # Przejdź przez wszystkie inne potencjalne podkatalogi
       for dir in resources/abi/*; do \
         if [ -d "$dir" ] && [ "$(basename "$dir")" != "fuel_token_gateway" ]; then \
           echo "Compiling contracts in $dir..."; \
           cd "$dir" && \
           forc clean && \
           forc build && \
-          # Wyświetl wygenerowane pliki ABI
           find out -name "*-abi.json" -type f && \
           cd ../../..; \
         fi; \
@@ -104,17 +112,34 @@ RUN if [ -d "resources/abi" ]; then \
 # List the resources directory to confirm that we have abi files
 RUN find resources -type f | sort
 
-# Sprawdź czy istnieje ścieżka do ABI, która powodowała błąd
+
+RUN echo "--- Forc version and contract build output ---" && \
+    forc --version && \
+    cd resources/abi/fuel_token_gateway && \
+    forc build --debug --print-ast || echo "⚠️ forc build failed" && \
+    find out -type f | sort
+
+RUN echo "--- Checking contract structure ---" && \
+    ls -l resources/abi/fuel_token_gateway && \
+    cat resources/abi/fuel_token_gateway/Forc.toml || echo "No Forc.toml"
+
+
+
 RUN test -f resources/abi/fuel_token_gateway/out/debug/bridge_fungible_token-abi.json && \
     echo "ABI file exists at expected path" || \
     echo "WARNING: ABI file does not exist at expected path: resources/abi/fuel_token_gateway/out/debug/bridge_fungible_token-abi.json"
 
-# Dodatkowa próba utworzenia katalogu i pustego pliku ABI, jeśli go nie ma
 RUN if [ ! -f "resources/abi/fuel_token_gateway/out/debug/bridge_fungible_token-abi.json" ]; then \
-      echo "Creating empty ABI file as fallback..."; \
-      mkdir -p resources/abi/fuel_token_gateway/out/debug; \
-      echo '{"types":[],"functions":[]}' > resources/abi/fuel_token_gateway/out/debug/bridge_fungible_token-abi.json; \
+      echo "ERROR: ABI file not generated as expected. Stopping build."; \
+      exit 1; \
     fi
+
+
+#RUN if [ ! -f "resources/abi/fuel_token_gateway/out/debug/bridge_fungible_token-abi.json" ]; then \
+#      echo "Creating empty ABI file as fallback..."; \
+#      mkdir -p resources/abi/fuel_token_gateway/out/debug; \
+#      echo '{"types":[],"functions":[]}' > resources/abi/fuel_token_gateway/out/debug/bridge_fungible_token-abi.json; \
+#    fi
 
 # Build the application
 RUN cargo build --release
@@ -142,10 +167,8 @@ RUN mkdir -p /usr/src/app/resources
 # Copy the entire resources directory from builder
 COPY --from=builder /usr/src/app/resources /usr/src/app/resources/
 
-# Sprawdź czy katalog migration istnieje przed próbą skopiowania
 RUN mkdir -p /usr/src/app/migration
 
-# Kopiuj pliki migracji, jeśli istnieją (bez używania operatorów powłoki w COPY)
 COPY --from=builder /usr/src/app/migration /usr/src/app/migration
 
 # Set the working directory for the application
