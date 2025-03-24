@@ -4,7 +4,6 @@ use std::time::{Duration, Instant};
 use chrono::{DateTime, Utc};
 use fuels::prelude::{abigen, Bech32ContractId, Error, Execution, Provider, WalletUnlocked};
 use fuels::types::{AssetId, BlockHeight, ContractId};
-use num_traits::{FromPrimitive, ToPrimitive};
 use sea_orm::DbErr;
 use sea_orm::prelude::Decimal;
 use uuid::Uuid;
@@ -51,7 +50,7 @@ impl TxSync{
 
         loop {
             let provider = Provider::connect(CONFIG.default.rpc_url_one.as_str()).await?;
-            let current_block = provider.latest_block_height().await?;
+            let current_block = provider.latest_block_height().await? - 2; //Errors in RPC
 
             log::info!("TXS-{}: - Current block: {}",runner_id,current_block);
 
@@ -436,7 +435,7 @@ async fn update_token_price(token: &TokenEntity, new_price: f64, timestamp: Date
         new_price,token.decimals);
 
     token_update.price = new_price;
-    let updated_token = TokenService::update_price(token_update).await?;
+    let _updated_token = TokenService::update_price(token_update).await?;
     let price_data = PriceDataEntity {
         id: Uuid::new_v4(),
         token_id: token.id,

@@ -52,7 +52,7 @@ impl FuelRpcService {
         //let provider3= Provider::connect(CONFIG.default.rpc_url_three.as_str()).await?;
 
         Ok(FuelRpcService {
-            providers: vec![provider1,provider2/*, provider3*/],
+            providers: vec![provider1/*,provider2, provider3*/],
             cache: Arc::new(Mutex::new(HashMap::new()))
         })
     }
@@ -126,7 +126,7 @@ impl FuelRpcService {
                 log::info!("Tx not found");
             }
             //TODO it should be extracted to CONFIG
-            tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(CONFIG.default.api_query_sleep_time.clone() as u64)).await;
 
         }
         if logs.len() > 0 {
@@ -139,7 +139,7 @@ impl FuelRpcService {
 
         let start_time = Instant::now();
 
-        let concurrent_requests = 2;
+        let concurrent_requests = 1;
 
         let results = stream::iter(block_number_start..=block_number_end)
             .map(|block_number| {
