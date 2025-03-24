@@ -127,7 +127,6 @@ impl FuelRpcService {
             }
             //TODO it should be extracted to CONFIG
             tokio::time::sleep(std::time::Duration::from_millis(CONFIG.default.api_query_sleep_time.clone() as u64)).await;
-
         }
         if logs.len() > 0 {
             log::info!("Block: {} - Swaps in logs: {}", block_number, logs.len());
