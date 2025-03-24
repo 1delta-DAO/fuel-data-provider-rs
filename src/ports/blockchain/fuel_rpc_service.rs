@@ -125,6 +125,9 @@ impl FuelRpcService {
             else{
                 log::info!("Tx not found");
             }
+            //TODO it should be extracted to CONFIG
+            tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+
         }
         if logs.len() > 0 {
             log::info!("Block: {} - Swaps in logs: {}", block_number, logs.len());
