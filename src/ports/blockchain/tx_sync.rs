@@ -302,24 +302,24 @@ pub async fn add_price(
                 // Both tokens have prices, use the one with more recent updated_at
                 if token_base.updated_at > token_quote.updated_at {
                     // Base token has more recent price, use it to calculate quote token price
-                    /*let quote_price = token_base.price * (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals)) /
-                        (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals));*/
+                    let quote_price = token_base.price * (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals)) /
+                        (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals));
                     update_token_price(token_quote, quote_price, timestamp).await?;
                 } else {
                     // Quote token has more recent price, use it to calculate base token price
-/*                    let base_price = token_quote.price * (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals)) /
-                        (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals));*/
+                    let base_price = token_quote.price * (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals)) /
+                        (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals));
                     update_token_price(token_base, base_price, timestamp).await?;
                 }
             } else if token_base.price > 0.0 {
                 // Only base token has a price, use it to calculate quote token price
-/*                let quote_price = token_base.price * (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals)) /
-                    (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals));*/
+                let quote_price = token_base.price * (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals)) /
+                    (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals));
                 update_token_price(token_quote, quote_price, timestamp).await?;
             } else if token_quote.price > 0.0 {
                 // Only quote token has a price, use it to calculate base token price
- /*               let base_price = token_quote.price * (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals)) /
-                    (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals));*/
+                let base_price = token_quote.price * (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals)) /
+                    (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals));
                 update_token_price(token_base, base_price, timestamp).await?;
             } else {
                 log::warn!(
@@ -399,22 +399,33 @@ pub async fn add_price_v2(
                 "Price update: neither {} nor {} are quoting tokens",
                 token_base.symbol,
                 token_quote.symbol);
-
-            // Sprawdzamy, który token ma aktualniejszą cenę
             if token_base.price > 0.0 && token_quote.price > 0.0 {
+                // Both tokens have prices, use the one with more recent updated_at
                 if token_base.updated_at > token_quote.updated_at {
-                    // Base token ma nowszą cenę, używamy jej do obliczenia ceny quote token
-                    update_token_price(token_quote, base_price, timestamp).await?;
+                    // Base token has more recent price, use it to calculate quote token price
+                    let quote_price = token_base.price * (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals)) /
+                        (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals));
+                    log::info!("Quote Price: {}",quote_price);
+                    update_token_price(token_quote, quote_price, timestamp).await?;
                 } else {
-                    // Quote token ma nowszą cenę, używamy jej do obliczenia ceny base token
-                    update_token_price(token_base, quote_price, timestamp).await?;
+                    // Quote token has more recent price, use it to calculate base token price
+                    let base_price = token_quote.price * (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals)) /
+                        (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals));
+                    log::info!("Base Price: {}",base_price);
+                    update_token_price(token_base, base_price, timestamp).await?;
                 }
             } else if token_base.price > 0.0 {
-                // Tylko base_token ma cenę, używamy jej do obliczenia ceny quote_token
-                update_token_price(token_quote, base_price, timestamp).await?;
+                // Only base token has a price, use it to calculate quote token price
+                let quote_price = token_base.price * (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals)) /
+                    (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals));
+                log::info!("Quote Price: {}",quote_price);
+                update_token_price(token_quote, quote_price, timestamp).await?;
             } else if token_quote.price > 0.0 {
-                // Tylko quote_token ma cenę, używamy jej do obliczenia ceny base_token
-                update_token_price(token_base, quote_price, timestamp).await?;
+                // Only quote token has a price, use it to calculate base token price
+                let base_price = token_quote.price * (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals)) /
+                    (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals));
+                log::info!("Base Price: {}",base_price);
+                update_token_price(token_base, base_price, timestamp).await?;
             } else {
                 log::warn!(
                     "Skipping price update: neither {} nor {} are quoting tokens and neither has a price.",
