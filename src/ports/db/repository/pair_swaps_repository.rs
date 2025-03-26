@@ -1,4 +1,4 @@
-use crate::ports::db::model::{pair_swaps, sync_status, volume_data};
+use crate::ports::db::model::{pair_swaps, sync_status};
 use crate::ports::db::model::pair_swaps::Model;
 use crate::ports::db::repository::CrudRepository;
 use async_trait::async_trait;

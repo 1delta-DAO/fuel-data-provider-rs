@@ -1,4 +1,4 @@
-use chrono::{DateTime, FixedOffset, Timelike};
+use chrono::Timelike;
 use sea_orm::{DbErr, IntoActiveModel};
 use uuid::Uuid;
 use crate::domain::entity::entity::Entity;
@@ -53,20 +53,6 @@ impl VolumeDataService {
         } else {
             Ok(None)
         }
-    }
-
-    /// Finds volume data by timestamp and token_id
-    pub async fn find_by_timestamp_and_token_id(
-        timestamp: &DateTime<FixedOffset>,
-        token_id: &Uuid
-    ) -> Result<Option<VolumeDataEntity>, DbErr> {
-        // Convert FixedOffset to UTC DateTime for repository call
-        let timestamp_utc = timestamp.with_timezone(&chrono::Utc);
-
-        let result = VolumeDataRepository::find_by_timestamp_and_token_id(&timestamp_utc, token_id).await?;
-
-        // Convert the model to entity if found
-        Ok(result.map(|model| VolumeDataEntity::from_model(&model)))
     }
 
     pub async fn delete_expired() -> Result<u64, DbErr> {

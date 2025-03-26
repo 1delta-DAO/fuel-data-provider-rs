@@ -4,7 +4,7 @@ use crate::ports::db::model::pair_swaps::Model;
 use sea_orm::DbErr;
 use uuid::Uuid;
 use crate::domain::entity::entity::Entity;
-use crate::ports::db::repository::{CrudRepository, PairSwapsRepository, VolumeDataRepository};
+use crate::ports::db::repository::{CrudRepository, PairSwapsRepository};
 
 /// Service layer for handling operations related to `PairSwapsEntity`
 pub struct PairSwapsService;

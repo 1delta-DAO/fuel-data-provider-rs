@@ -16,11 +16,6 @@ impl PriceDataService {
         Ok(PriceDataEntity::from_model(&created_model))
     }
 
-    pub async fn find_by_token_id(token_id: &Uuid) -> Result<Vec<PriceDataEntity>, DbErr> {
-        let models = PriceDataRepository::find_by_token_id(token_id).await?;
-        Ok(models.into_iter().map(|model| PriceDataEntity::from_model(&model)).collect())
-    }
-
     pub async fn find_oldest_by_token_id(token_id: &Uuid) -> Result<Option<PriceDataEntity>, DbErr> {
         let model = PriceDataRepository::find_oldest_by_token_id(token_id).await?;
         Ok(model.map(|model| PriceDataEntity::from_model(&model)))
