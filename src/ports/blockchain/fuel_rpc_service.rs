@@ -32,10 +32,6 @@ impl MiraEvent {
             _ => None,
         }
     }
-
-    pub fn as_u64(self) -> u64 {
-        self as u64
-    }
 }
 
 pub struct FuelRpcService {
@@ -48,7 +44,7 @@ impl FuelRpcService {
     pub async fn new() -> Result<Self, fuels::types::errors::Error> {
 
         let provider1= Provider::connect(CONFIG.default.rpc_url_one.as_str()).await?;
-        let provider2= Provider::connect(CONFIG.default.rpc_url_two.as_str()).await?;
+        let _provider2= Provider::connect(CONFIG.default.rpc_url_two.as_str()).await?;
         //let provider3= Provider::connect(CONFIG.default.rpc_url_three.as_str()).await?;
 
         Ok(FuelRpcService {

@@ -16,15 +16,21 @@ impl CalculationManager {
 
                 // volume24
 
-                let volume_data = VolumeDataService::find_by_token_id(&token.id).await.unwrap();
-                let total_volume: f64 = volume_data.iter()
-                    .map(|data| data.volume)
-                    .sum();
+                let mut total_volume: f64 = 0.0;
+
+                let volume_data_result = VolumeDataService::find_by_token_id(&token.id).await.unwrap();
+                if volume_data_result.is_some(){
+
+                    let volume_data = volume_data_result.unwrap();
+                    total_volume = volume_data.iter()
+                        .map(|data| data.volume)
+                        .sum();
+
+                }
 
                 log::info!(
-                    "Token: {} - volume records: {}, total volume: {:.2}",
+                    "Token: {} - total volume: {:.2}",
                     token.symbol,
-                    volume_data.len(),
                     total_volume
                 );
 
@@ -45,6 +51,7 @@ impl CalculationManager {
                 }
                 else {
                     token.price_change24 = 0.0;
+                    token.price = 0.0;
                 }
 
                 TokenService::update_price_change(token.clone()).await.unwrap();

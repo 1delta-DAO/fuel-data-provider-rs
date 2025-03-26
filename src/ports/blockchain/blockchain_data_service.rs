@@ -12,7 +12,7 @@ struct CalcWindow {
     start_block_time: DateTime<Utc>,
     end_block_number: u64,
     end_block_time: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
+    //updated_at: DateTime<Utc>, - we should update sync status with this
 }
 
 #[derive(Clone)]
@@ -30,7 +30,7 @@ static CALC_WINDOW: Lazy<Mutex<CalcWindow>> = Lazy::new(|| {
         start_block_time: now,
         end_block_number: 0,
         end_block_time: now,
-        updated_at: now,
+        //updated_at: now,
     })
 });
 
@@ -45,7 +45,7 @@ impl BlockchainDataService{
             start_block_time: block_range.start_block_time,
             end_block_number: block_range.end_block_number,
             end_block_time: block_range.end_block_time,
-            updated_at: Utc::now(),
+            //updated_at: Utc::now(),
         };
     }
 

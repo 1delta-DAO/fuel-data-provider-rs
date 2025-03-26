@@ -1,5 +1,5 @@
 use std::time::Duration;
-use crate::domain::service::persistence::{PriceDataService, VolumeDataService};
+use crate::domain::service::persistence::{PairSwapsService, PriceDataService, VolumeDataService};
 use crate::domain::service::exception::DataException;
 
 pub struct ExpiredDataManager;
@@ -16,6 +16,19 @@ impl ExpiredDataManager {
                 },
                 Err(err) => {
                     let error_msg = format!("Error deleting expired volume data: {:?}", err);
+                    log::error!("{}", error_msg);
+                    return Err(DataException::DataCleanupException(error_msg));
+                }
+            }
+
+            match PairSwapsService::delete_expired().await {
+                Ok(count) => {
+                    if count > 0 {
+                        log::info!("Deleted {} expired pair swaps records", count);
+                    }
+                },
+                Err(err) => {
+                    let error_msg = format!("Error deleting expired pair swaps data: {:?}", err);
                     log::error!("{}", error_msg);
                     return Err(DataException::DataCleanupException(error_msg));
                 }

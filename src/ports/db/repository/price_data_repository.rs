@@ -14,10 +14,6 @@ pub struct PriceDataRepository;
 #[async_trait]
 impl CrudRepository<price_data::Entity> for PriceDataRepository {}
 impl PriceDataRepository {
-    /// Finds prices by id
-    pub async fn find_by_token_id(token_id: &Uuid) -> Result<Vec<Model>, DbErr> {
-        Self::find_by_column_many(price_data::Column::TokenId, token_id.to_owned()).await
-    }
 
     pub async fn find_oldest_by_token_id(token_id: &Uuid) -> Result<Option<Model>, DbErr> {
         use sea_orm::{EntityTrait, QueryFilter, QueryOrder, ColumnTrait};

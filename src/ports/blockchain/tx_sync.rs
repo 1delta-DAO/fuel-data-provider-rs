@@ -100,7 +100,6 @@ impl TxSync{
                                 for swap in swaps {
 
                                     let pool = Pool::from_swap(&swap.swap_event).unwrap();
-                                    //log::info!("Pool: {:?}",pool);
                                     let token_base
                                         = get_mira_token_details_by_asset_id(&provider,&AssetId::from_str(pool.token0_address.as_str()).unwrap()).await.unwrap_or(None);
                                     if let Some(ref token_base) = token_base{
@@ -128,7 +127,7 @@ impl TxSync{
                                             if swap.swap_event.asset_0_in !=0
                                             {
                                                 add_volume(token_base,token_quote,&pair_swap).await.unwrap();
-                                                add_price_v2(token_base,token_quote,&pair_swap).await.unwrap();
+                                                add_price(token_base,token_quote,&pair_swap).await.unwrap();
                                                 pair_swaps_vec.push(pair_swap);
 
                                             }
@@ -237,103 +236,6 @@ pub async fn add_volume(
 }
 
 pub async fn add_price(
-    token_base: &TokenEntity,
-    token_quote: &TokenEntity,
-    pair_swap: &PairSwapsEntity,
-) -> Result<(), DbErr> {
-    let timestamp = match pair_swap.block_time {
-        Some(time) => time,
-        None => {
-            log::error!("Missing block_time for PairSwapsEntity: {:?}", pair_swap);
-            return Err(DbErr::Custom("Missing block_time".to_string()));
-        }
-    };
-
-    log::info!(
-        "Adding price for {}/{}: {}/{} : {}/{} : {}/{}",
-        token_base.symbol,
-        token_quote.symbol,
-        pair_swap.base_amount,
-        pair_swap.quote_amount,
-        token_base.decimals,
-        token_quote.decimals,
-        token_base.quoting,
-        token_quote.quoting);
-
-    let base_price = Converter::round_f64(
-        (pair_swap.base_amount as f64/10f32.powi(token_base.decimals) as f64)
-            /(pair_swap.quote_amount as f64/10f32.powi(token_quote.decimals) as f64),
-        token_quote.decimals);
-    let quote_price = Converter::round_f64(
-        (pair_swap.quote_amount as f64/10f32.powi(token_quote.decimals) as f64)
-            /(pair_swap.base_amount as f64/10f32.powi(token_base.decimals) as f64),
-        token_base.decimals);
-
-
-    match (token_base.quoting, token_quote.quoting) {
-        (false,true) => {
-            // token_base is quoting, calculate price of token_quote
-            /*            let price = Converter::round_f64(
-                (pair_swap.quote_amount as f64/10f32.powi(token_quote.decimals) as f64)
-                    /(pair_swap.base_amount as f64/10f32.powi(token_base.decimals) as f64),
-            token_base.decimals);
-            */
-            update_token_price(token_base, quote_price, timestamp).await?;
-        }
-        (true,false) => {
-            // token_quote is quoting, calculate price of token_base
-            /*            let price = Converter::round_f64(
-                (pair_swap.base_amount as f64/10f32.powi(token_base.decimals) as f64)
-                    /(pair_swap.quote_amount as f64/10f32.powi(token_quote.decimals) as f64),
-                token_quote.decimals);*/
-            update_token_price(token_quote, base_price, timestamp).await?;
-        }
-        (true, true) => {
-            // Both tokens are quoting, assign reciprocal prices
-            update_token_price(token_base, base_price, timestamp).await?;
-            update_token_price(token_quote, quote_price, timestamp).await?;
-        }
-        (false, false) => {
-            log::warn!(
-                "Price update: neither {} nor {} are quoting tokens",
-                token_base.symbol,
-                token_quote.symbol);
-            if token_base.price > 0.0 && token_quote.price > 0.0 {
-                // Both tokens have prices, use the one with more recent updated_at
-                if token_base.updated_at > token_quote.updated_at {
-                    // Base token has more recent price, use it to calculate quote token price
-                    let quote_price = token_base.price * (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals)) /
-                        (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals));
-                    update_token_price(token_quote, quote_price, timestamp).await?;
-                } else {
-                    // Quote token has more recent price, use it to calculate base token price
-                    let base_price = token_quote.price * (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals)) /
-                        (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals));
-                    update_token_price(token_base, base_price, timestamp).await?;
-                }
-            } else if token_base.price > 0.0 {
-                // Only base token has a price, use it to calculate quote token price
-                let quote_price = token_base.price * (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals)) /
-                    (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals));
-                update_token_price(token_quote, quote_price, timestamp).await?;
-            } else if token_quote.price > 0.0 {
-                // Only quote token has a price, use it to calculate base token price
-                let base_price = token_quote.price * (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals)) /
-                    (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals));
-                update_token_price(token_base, base_price, timestamp).await?;
-            } else {
-                log::warn!(
-                    "Skipping price update: neither {} nor {} are quoting tokens and neither has a price.",
-                    token_base.symbol,
-                    token_quote.symbol
-                );
-            }
-        }
-    }
-    Ok(())
-}
-
-pub async fn add_price_v2(
     token_base: &TokenEntity,
     token_quote: &TokenEntity,
     pair_swap: &PairSwapsEntity,
@@ -534,7 +436,7 @@ async fn is_block_in_calc_window(provider: &Provider, block_number: u64) -> bool
     block_time >= cutoff_time
 }
 
-async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>, Error>{
+/*async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>, Error>{
 
     log::info!("Fetching token details by asset_id: {}",asset_id.to_string());
     let token = TokenService::find_by_address(&asset_id.to_string()).await.unwrap();
@@ -612,7 +514,7 @@ async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -
         }
     }
 
-}
+}*/
 
 async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>,Error>{
 
