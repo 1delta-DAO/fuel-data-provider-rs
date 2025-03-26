@@ -1,4 +1,4 @@
-use crate::ports::db::model::{pair_swaps, sync_status};
+use crate::ports::db::model::{pair_swaps, sync_status, volume_data};
 use crate::ports::db::model::pair_swaps::Model;
 use crate::ports::db::repository::CrudRepository;
 use async_trait::async_trait;
@@ -6,6 +6,8 @@ use chrono::{DateTime, Utc};
 use sea_orm::{DbErr, EntityTrait, ColumnTrait, QueryFilter, TransactionTrait, ActiveValue, IntoActiveModel, ActiveModelTrait};
 use sea_orm::ActiveValue::Set;
 use uuid::Uuid;
+use crate::config::CONFIG;
+use crate::ports::db::database_manager::DB_MANAGER;
 
 pub struct PairSwapsRepository;
 
@@ -86,14 +88,26 @@ impl PairSwapsRepository {
             .await
     }
 
-    /// Deletes all records where `block_time` is older than the provided timestamp
-    pub async fn delete_older_than(timestamp: DateTime<Utc>) -> Result<u64, DbErr> {
-        let db = crate::ports::db::database_manager::DB_MANAGER.get_connection().await.unwrap();
-        let result = pair_swaps::Entity::delete_many()
-            .filter(pair_swaps::Column::BlockTime.lte(timestamp))
-            .exec(&db)
+    /// Deletes pair swaps data records older than the specified number of minutes
+    pub async fn delete_expired() -> Result<u64, DbErr> {
+        use sea_orm::{Condition, prelude::*};
+        use chrono::{Utc, Duration};
+
+        let minutes = CONFIG.default.calculation_window as i64;
+
+        // Calculate the cutoff timestamp (current time minus specified minutes)
+        let cutoff_time = Utc::now() - Duration::minutes(minutes);
+
+        // Create the filter condition for records older than the cutoff time
+        let condition = Condition::all().add(pair_swaps::Column::CreatedAt.lt(cutoff_time));
+
+        // Execute the delete operation
+        let delete_result = pair_swaps::Entity::delete_many()
+            .filter(condition)
+            .exec(&DB_MANAGER.get_connection().await.unwrap())
             .await?;
 
-        Ok(result.rows_affected)
+        // Return the number of rows affected
+        Ok(delete_result.rows_affected)
     }
 }

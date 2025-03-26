@@ -4,7 +4,7 @@ use crate::ports::db::model::pair_swaps::Model;
 use sea_orm::DbErr;
 use uuid::Uuid;
 use crate::domain::entity::entity::Entity;
-use crate::ports::db::repository::{CrudRepository, PairSwapsRepository};
+use crate::ports::db::repository::{CrudRepository, PairSwapsRepository, VolumeDataRepository};
 
 /// Service layer for handling operations related to `PairSwapsEntity`
 pub struct PairSwapsService;
@@ -58,8 +58,7 @@ impl PairSwapsService {
         PairSwapsRepository::delete(id).await
     }
 
-    /// Deletes all records where `block_time` is older than the given timestamp
-    pub async fn delete_older_than(timestamp: DateTime<Utc>) -> Result<u64, DbErr> {
-        PairSwapsRepository::delete_older_than(timestamp).await
+    pub async fn delete_expired() -> Result<u64, DbErr> {
+        PairSwapsRepository::delete_expired().await
     }
 }

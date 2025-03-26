@@ -44,9 +44,15 @@ impl VolumeDataService {
         }
     }
 
-    pub async fn find_by_token_id(token_id: &Uuid) -> Result<Vec<VolumeDataEntity>, DbErr> {
+    pub async fn find_by_token_id(token_id: &Uuid) -> Result<Option<Vec<VolumeDataEntity>>, DbErr> {
         let models = VolumeDataRepository::find_by_token_id(token_id).await?;
-        Ok(models.into_iter().map(|model| VolumeDataEntity::from_model(&model)).collect())
+
+        if let Some(models) = models {
+            let entities = models.into_iter().map(|model| VolumeDataEntity::from_model(&model)).collect();
+            Ok(Some(entities))
+        } else {
+            Ok(None)
+        }
     }
 
     /// Finds volume data by timestamp and token_id

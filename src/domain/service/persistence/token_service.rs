@@ -7,6 +7,7 @@ use sea_orm::{DbErr, IntoActiveModel};
 use sea_orm::ActiveValue::Set;
 use sea_orm::prelude::Decimal;
 use crate::domain::entity::TokenEntity;
+use crate::domain::utils::Converter;
 
 pub struct TokenService;
 
@@ -50,7 +51,8 @@ impl TokenService {
     /// Updates an existing token
     pub async fn update_price(token_entity: TokenEntity) -> Result<TokenEntity, DbErr> {
         let mut active_model: token::ActiveModel = token_entity.to_model().into();
-        active_model.price = Set(Decimal::from_f64(token_entity.price).unwrap());
+        //rounding here is simplified. We are always in USD and it has everywhere 6
+        active_model.price = Set(Decimal::from_f64(Converter::round_f64(token_entity.price,6)).unwrap());
         active_model.updated_at = Set(Utc::now().into());
         let updated_model = TokenRepository::update(active_model).await?;
         Ok(TokenEntity::from_model(&updated_model))
@@ -59,6 +61,7 @@ impl TokenService {
     pub async fn update_price_change(token_entity: TokenEntity) -> Result<TokenEntity, DbErr> {
         let mut active_model: token::ActiveModel = token_entity.to_model().into();
         active_model.price_change24 = Set(Decimal::from_f32(token_entity.price_change24).unwrap());
+        active_model.price = Set(Decimal::from_f64(Converter::round_f64(token_entity.price,6)).unwrap());
         active_model.updated_at = Set(Utc::now().into());
         let updated_model = TokenRepository::update(active_model).await?;
         Ok(TokenEntity::from_model(&updated_model))

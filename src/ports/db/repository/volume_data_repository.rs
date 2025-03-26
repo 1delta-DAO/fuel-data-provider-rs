@@ -15,8 +15,14 @@ impl CrudRepository<volume_data::Entity> for VolumeDataRepository {}
 
 impl VolumeDataRepository {
     /// Finds volume records by id
-    pub async fn find_by_token_id(token_id: &Uuid) -> Result<Vec<Model>, DbErr> {
-        Self::find_by_column_many(volume_data::Column::TokenId, token_id.to_owned()).await
+    pub async fn find_by_token_id(token_id: &Uuid) -> Result<Option<Vec<Model>>, DbErr> {
+        let result = Self::find_by_column_many(volume_data::Column::TokenId, token_id.to_owned()).await?;
+
+        if result.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(result))
+        }
     }
 
     pub async fn find_by_timestamp_and_token_id(
