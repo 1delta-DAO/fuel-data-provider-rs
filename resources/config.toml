@@ -1,5 +1,6 @@
 [default]
 server_port_http=8080
+api_key = "84e2bd1f3bd515bb506d86fa301f9880fe931cfd5975a2e5d389ea982bba1d70"
 data_refresh_interval=300 # seconds
 #rpc_url="https://autumn-magical-glade.fuel-mainnet.quiknode.pro/v1/graphql"
 #https://rpc.ankr.com/premium-http/fuel/2051d179b3f725afcd27cc235efcd67a84f709abfa6aaedd44de641782be8a2a
