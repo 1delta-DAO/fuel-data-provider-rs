@@ -9,6 +9,7 @@ use std::sync::Arc;
 #[derive(Debug, Deserialize)]
 pub struct DefaultConfig {
     pub server_port_http: u16,
+    pub api_key: String,
     pub db_url: String,
     pub db_username: String,
     pub db_password: String,
@@ -41,6 +42,7 @@ pub struct AppConfig {
 
 pub enum EnvVar {
     ServerPortHTTP,
+    ApiKey,
     DbUrl,
     DBUsername,
     DBPassword,
@@ -71,6 +73,7 @@ impl fmt::Display for EnvVar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
             EnvVar::ServerPortHTTP => "SERVER_PORT_HTTP",
+            EnvVar::ApiKey => "API_KEY",
             EnvVar::DbUrl => "DB_URL",
             EnvVar::DBUsername => "DB_USERNAME",
             EnvVar::DBPassword => "DB_PASSWORD",
@@ -133,6 +136,7 @@ pub fn load_config_from_env_or_file() -> Result<AppConfig, Box<dyn Error>> {
     // Override with environment variables
     config.default.server_port_http =
         EnvVar::ServerPortHTTP.get_value(config.default.server_port_http);
+    config.default.api_key = EnvVar::ApiKey.get_value(config.default.api_key.clone());
     config.default.db_url = EnvVar::DbUrl.get_value(config.default.db_url.clone());
     config.default.db_username = EnvVar::DBUsername.get_value(config.default.db_username.clone());
     config.default.db_password = EnvVar::DBPassword.get_value(config.default.db_password.clone());

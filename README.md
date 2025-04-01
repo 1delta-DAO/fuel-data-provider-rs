@@ -4,6 +4,10 @@
 ### Endpoints
 
 
+```shell
+curl -H "x-api-key: your_secret_api_key" http://localhost:8080/tokens/
+```
+
 #### Assets
 
 GET: http://localhost:8080/status/
