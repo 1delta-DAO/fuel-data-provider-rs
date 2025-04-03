@@ -29,7 +29,7 @@ impl Entity<Model> for TokenEntity {
             symbol: model.symbol.clone(),
             name: model.name.clone(),
             price: model.price.to_f64().unwrap(),
-            volume_24: model.price.to_f64().unwrap(),
+            volume_24: model.volume24.to_f64().unwrap(),
             price_change24: model.price_change24.to_f32().unwrap(),
             decimals: model.decimals.clone(),
             created_at: model.created_at.with_timezone(&Utc),
