@@ -7,6 +7,7 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub timestamp: DateTimeWithTimeZone,
+    #[sea_orm(primary_key, auto_increment = false)]
     pub token_id: Uuid,
     pub volume: Decimal,
 }

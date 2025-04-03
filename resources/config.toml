@@ -15,7 +15,7 @@ db_password="admin"
 db_min_connections=4
 db_max_connections=8
 db_sql_logging=false
-tx_log_start_block_number=17414739
+tx_log_start_block_number=18014739
 calculation_window=1480 #minutes
 api_query_sleep_time=1 #ms
 #0x81d5964bfbb24fd994591cc7d0a4137458d746ac0eb7ececb9a9cf2ae966d942

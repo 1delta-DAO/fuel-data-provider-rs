@@ -70,6 +70,7 @@ impl TokenService {
     pub async fn update_volume(token_entity: TokenEntity) -> Result<TokenEntity, DbErr> {
         let mut active_model: token::ActiveModel = token_entity.to_model().into();
         active_model.volume24 = Set(Decimal::from_f64(token_entity.volume_24).unwrap());
+        active_model.volume24_usd = Set(Decimal::from_f64(token_entity.volume_24_usd).unwrap());
         active_model.updated_at = Set(Utc::now().into());
 
         let updated_model = TokenRepository::update(active_model).await?;
