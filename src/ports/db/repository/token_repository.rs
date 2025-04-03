@@ -67,7 +67,7 @@ impl TokenRepository {
         let db = &crate::ports::db::database_manager::DB_MANAGER.get_connection().await.unwrap();
 
         token::Entity::find()
-            .order_by(token::Column::Volume24, Order::Desc)
+            .order_by(token::Column::Volume24Usd, Order::Desc)
             .all(db)
             .await
     }

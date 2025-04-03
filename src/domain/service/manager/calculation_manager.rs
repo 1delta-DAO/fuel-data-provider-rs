@@ -33,7 +33,7 @@ impl CalculationManager {
                     token.symbol,
                     total_volume
                 );
-
+                token.volume_24_usd = Converter::round_f64(total_volume * token.price,token.decimals);
                 token.volume_24 = Converter::round_f64(total_volume,token.decimals);
                 TokenService::update_volume(token.clone()).await.unwrap();
 
@@ -51,7 +51,7 @@ impl CalculationManager {
                 }
                 else {
                     token.price_change24 = 0.0;
-                    token.price = 0.0;
+                    //token.price = 0.0; - this will delete price if there is no updates in the last 24h
                 }
 
                 TokenService::update_price_change(token.clone()).await.unwrap();
