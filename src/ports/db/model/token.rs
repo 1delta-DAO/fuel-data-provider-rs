@@ -23,6 +23,7 @@ pub struct Model {
     pub updated_at: DateTimeWithTimeZone,
     pub volume24_usd: Decimal,
     pub liquidity: Decimal,
+    pub liquidity_usd: Decimal,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

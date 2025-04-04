@@ -1,6 +1,7 @@
 use std::time::Duration;
 use crate::domain::service::exception::DataException;
 use crate::domain::service::persistence::{PriceDataService, TokenService, VolumeDataService};
+use crate::domain::service::persistence::mira_pools_service::MiraPoolsService;
 use crate::domain::utils::Converter;
 
 pub struct CalculationManager;
@@ -12,6 +13,7 @@ impl CalculationManager {
             log::info!("Calculating stats...");
 
             let tokens = TokenService::find_all_tokens().await.unwrap();
+            let liquidity = MiraPoolsService::prepare_tokens_liquidity().await.unwrap();
             for mut token in tokens {
 
                 // volume24
@@ -57,7 +59,28 @@ impl CalculationManager {
                 TokenService::update_price_change(token.clone()).await.unwrap();
                 log::info!("Price change 24: {:.2}", token.price_change24);
 
-                //let price_data = PriceDataService::find_by_token_id(&token.id).await.unwrap();
+                let found_token = liquidity.iter().find(|token_liquidity| token_liquidity.address == token.address);
+                match found_token {
+                    Some(token_liquidity) => {
+                        token.liquidity = token_liquidity.liquidity;
+                    },
+                    None => {
+                        token.liquidity = 0.0;
+                    }
+                }
+                token.no_liquidity = false;
+                if token.quoting{
+                    token.liquidity_usd = Converter::round_f64(token.liquidity,token.decimals);
+                }else{
+                    token.liquidity_usd = Converter::round_f64(token.liquidity * token.price,token.decimals);
+                }
+                if token.liquidity_usd == 0.0 {
+                    token.no_liquidity = true;
+                }
+                TokenService::update_liquidity(token.clone()).await.unwrap();
+
+
+                log::info!("Liquidity: {} | USD:{} ", token.liquidity, token.liquidity_usd);
             }
 
             // Sleep for 1 minute before calculations

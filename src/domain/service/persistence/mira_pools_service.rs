@@ -1,10 +1,14 @@
+use std::collections::HashMap;
 use chrono::Utc;
-use crate::ports::db::repository::{CrudRepository, MiraPoolsRepository};
+use num_traits::ToPrimitive;
+use crate::ports::db::repository::{CrudRepository, MiraPoolsRepository, TokenPairsRepository, TokenRepository};
 use sea_orm::{ActiveValue, DbErr, IntoActiveModel};
 use sea_orm::prelude::{DateTimeWithTimeZone, Decimal};
 use uuid::Uuid;
 use crate::domain::entity::entity::Entity;
 use crate::domain::entity::mira_pools_entity::MiraPoolsEntity;
+use crate::domain::entity::{TokenEntity, TokenPairsEntity};
+use crate::domain::utils::Converter;
 
 pub struct MiraPoolsService;
 
@@ -66,6 +70,90 @@ impl MiraPoolsService {
                 }
             }
         }
+    }
+
+    pub async fn collect_token_liquidity() -> Result<HashMap<Uuid, Decimal>, DbErr> {
+        // Get all pools
+        let all_pools = MiraPoolsRepository::find_all().await?;
+        let pools_entities: Vec<MiraPoolsEntity> = all_pools
+            .iter()
+            .map(|model| MiraPoolsEntity::from_model(model))
+            .collect();
+
+        // Get all token pairs to link pools with tokens
+        let all_pairs = TokenPairsRepository::find_all().await?;
+        let pairs_entities: Vec<TokenPairsEntity> = all_pairs
+            .iter()
+            .map(|model| TokenPairsEntity::from_model(model))
+            .collect();
+
+        // Create a map of pair_id -> token pair for faster lookups
+        let mut pair_map: HashMap<Uuid, &TokenPairsEntity> = HashMap::new();
+        for pair in &pairs_entities {
+            pair_map.insert(pair.id, pair);
+        }
+
+        // Aggregate liquidity for each token
+        let mut token_liquidity: HashMap<Uuid, Decimal> = HashMap::new();
+
+        for pool in &pools_entities {
+            // Find the token pair for this pool
+            if let Some(pair) = pair_map.get(&pool.pair_id) {
+                // Add liquidity for base token
+                let base_token_id = pair.base_token_details_id;
+                let base_liquidity_entry = token_liquidity.entry(base_token_id).or_insert(Decimal::ZERO);
+                log::info!("Base token: {} => {}", pair.base_symbol, base_liquidity_entry);
+                *base_liquidity_entry += pool.reserve_base.clone();
+                log::info!("Base token after increment: {}",base_liquidity_entry );
+
+                // Add liquidity for quote token
+                let quote_token_id = pair.quote_token_details_id;
+                let quote_liquidity_entry = token_liquidity.entry(quote_token_id).or_insert(Decimal::ZERO);
+                log::info!("Quote token: {} => {}", pair.quote_symbol, quote_liquidity_entry);
+                *quote_liquidity_entry += pool.reserve_quote.clone();
+                log::info!("Quote token after increment: {}",quote_liquidity_entry );
+            }
+        }
+
+        Ok(token_liquidity)
+    }
+
+    pub async fn prepare_tokens_liquidity() -> Result<Vec<TokenEntity>, DbErr> {
+        // Get aggregated liquidity for tokens
+        let token_liquidity = Self::collect_token_liquidity().await?;
+
+        // Get all tokens
+        let all_tokens = TokenRepository::find_all().await?;
+
+        // Prepare the result vector
+        let mut prepared_tokens: Vec<TokenEntity> = Vec::new();
+
+        // Prepare each token entity with the appropriate liquidity
+        for token_model in all_tokens {
+            let token_id = token_model.id;
+
+            // If we have liquidity data for this token
+            let raw_liquidity = token_liquidity.get(&token_id)
+                .cloned()
+                .unwrap_or(Decimal::ZERO);
+
+            let divisor = 10.0_f64.powi(token_model.decimals);
+            let liquidity = raw_liquidity.to_f64().unwrap_or(0.0) / divisor;
+
+
+            // Convert to entity
+            let mut token_entity = TokenEntity::from_model(&token_model);
+
+            // Update entity with liquidity value (convert to f64)
+            let liquidity_f64 = Converter::round_f64(liquidity.to_f64().unwrap_or(0.0), token_entity.decimals);
+            token_entity.liquidity = liquidity_f64;
+
+            // Add token entity to the result
+            prepared_tokens.push(token_entity);
+
+        }
+
+        Ok(prepared_tokens)
     }
 
 }

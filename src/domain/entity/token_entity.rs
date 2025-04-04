@@ -16,10 +16,13 @@ pub struct TokenEntity {
     pub volume_24: f64,
     pub volume_24_usd: f64,
     pub liquidity: f64,
+    pub liquidity_usd: f64,
     pub price_change24: f32,
     pub decimals: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub high_risk: bool,
+    pub no_liquidity: bool,
     pub quoting: bool,
 }
 
@@ -34,10 +37,13 @@ impl Entity<Model> for TokenEntity {
             volume_24: model.volume24.to_f64().unwrap(),
             volume_24_usd: model.volume24_usd.to_f64().unwrap(),
             liquidity: model.liquidity.to_f64().unwrap(),
+            liquidity_usd: model.liquidity_usd.to_f64().unwrap(),
             price_change24: model.price_change24.to_f32().unwrap(),
             decimals: model.decimals.clone(),
             created_at: model.created_at.with_timezone(&Utc),
             updated_at: model.updated_at.with_timezone(&Utc),
+            high_risk: model.high_risk.clone(),
+            no_liquidity: model.no_liquidity.clone(),
             quoting: model.quoting.clone(),
         }
     }
@@ -52,12 +58,13 @@ impl Entity<Model> for TokenEntity {
             volume24: Decimal::from_f64(self.volume_24.clone()).unwrap_or(Decimal::ZERO),
             volume24_usd: Decimal::from_f64(self.volume_24_usd.clone()).unwrap_or(Decimal::ZERO),
             liquidity: Decimal::from_f64(self.liquidity.clone()).unwrap_or(Decimal::ZERO),
+            liquidity_usd: Decimal::from_f64(self.liquidity_usd.clone()).unwrap_or(Decimal::ZERO),
             price_change24: Decimal::from_f32(self.price_change24.clone()).unwrap_or(Decimal::ZERO),
             decimals: self.decimals.clone(),
             created_at: self.created_at.into(),
             updated_at: self.updated_at.into(),
-            high_risk: false, // Defaulting to `false` as this field is omitted
-            no_liquidity: false, // Defaulting to `false` as this field is omitted
+            high_risk: self.high_risk.clone(),
+            no_liquidity: self.no_liquidity.clone(),
             quoting: self.quoting.clone(),
         }
     }
@@ -74,10 +81,13 @@ impl Default for TokenEntity {
             volume_24: 0.0,
             volume_24_usd: 0.0,
             liquidity: 0.0,
+            liquidity_usd: 0.0,
             price_change24: 0.0,
             decimals: 0,
             created_at: Utc::now(),
             updated_at: Utc::now(),
+            high_risk: true,
+            no_liquidity: true,
             quoting: false,
         }
     }
