@@ -77,6 +77,16 @@ impl TokenService {
         Ok(TokenEntity::from_model(&updated_model))
     }
 
+    pub async fn update_liquidity(token_entity: TokenEntity) -> Result<TokenEntity, DbErr> {
+        let mut active_model: token::ActiveModel = token_entity.to_model().into();
+        active_model.liquidity = Set(Decimal::from_f64(token_entity.liquidity).unwrap());
+        active_model.liquidity_usd = Set(Decimal::from_f64(token_entity.liquidity_usd).unwrap());
+        active_model.updated_at = Set(Utc::now().into());
+
+        let updated_model = TokenRepository::update(active_model).await?;
+        Ok(TokenEntity::from_model(&updated_model))
+    }
+
     /// Returns tokens sorted by price change in ascending order (biggest losers first)
     pub async fn find_biggest_losers() -> Result<Vec<TokenEntity>, DbErr> {
         let models = TokenRepository::find_sorted_by_price_change_asc().await?;
