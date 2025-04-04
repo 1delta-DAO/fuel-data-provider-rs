@@ -23,6 +23,8 @@ pub struct DefaultConfig {
     pub tx_log_start_block_number: u64,
     pub calculation_window: u16,
     pub api_query_sleep_time: u16,
+    pub high_risk_swaps: u16,
+    pub high_risk_liquidity: u16,
     pub cdi_fuel_token_gateway: String,
     pub cdi_fuel_token_gateway_dependency: String,
     pub cdi_mira_token_gateway: String,
@@ -56,6 +58,8 @@ pub enum EnvVar {
     TxLogStartBlockNumber,
     CalculationWindow,
     ApiQuerySleepTime,
+    HighRiskSwaps,
+    HighRiskLiquidity,
     CdiFuelTokenGateway,
     CdiFuelTokenGatewayDependency,
     CdiMiraTokenGateway,
@@ -87,6 +91,8 @@ impl fmt::Display for EnvVar {
             EnvVar::TxLogStartBlockNumber => "TX_LOG_START_BLOCK_NUMBER",
             EnvVar::CalculationWindow => "CALCULATION_WINDOW",
             EnvVar::ApiQuerySleepTime => "API_QUERY_SLEEP_TIME",
+            EnvVar::HighRiskSwaps => "HIGH_RISK_SWAPS",
+            EnvVar::HighRiskLiquidity => "HIGH_RISK_LIQUIDITY",
             EnvVar::CdiFuelTokenGateway => "CDI_FUEL_TOKEN_GATEWAY",
             EnvVar::CdiFuelTokenGatewayDependency => "CDI_FUEL_TOKEN_GATEWAY_DEPENDENCY",
             EnvVar::CdiMiraTokenGateway => "CDI_MIRA_TOKEN_GATEWAY",
@@ -156,6 +162,8 @@ pub fn load_config_from_env_or_file() -> Result<AppConfig, Box<dyn Error>> {
     config.default.calculation_window =
         EnvVar::CalculationWindow.get_value(config.default.calculation_window);
     config.default.api_query_sleep_time = EnvVar::ApiQuerySleepTime.get_value(config.default.api_query_sleep_time);
+    config.default.high_risk_swaps = EnvVar::HighRiskSwaps.get_value(config.default.high_risk_swaps);
+    config.default.high_risk_liquidity = EnvVar::HighRiskLiquidity.get_value(config.default.high_risk_liquidity);
     config.default.cdi_fuel_token_gateway = EnvVar::CdiFuelTokenGateway.get_value(config.default.cdi_fuel_token_gateway.clone());
     config.default.cdi_fuel_token_gateway_dependency = EnvVar::CdiFuelTokenGatewayDependency.get_value(config.default.cdi_fuel_token_gateway_dependency.clone());
     config.default.cdi_mira_token_gateway = EnvVar::CdiMiraTokenGateway.get_value(config.default.cdi_mira_token_gateway.clone());

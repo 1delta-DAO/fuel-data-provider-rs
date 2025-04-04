@@ -18,6 +18,8 @@ db_sql_logging=false
 tx_log_start_block_number=18014739
 calculation_window=1480 #minutes
 api_query_sleep_time=1 #ms
+high_risk_swaps=10
+high_risk_liquidity=50000 #in USD
 #0x81d5964bfbb24fd994591cc7d0a4137458d746ac0eb7ececb9a9cf2ae966d942
 #0x4ea6ccef1215d9479f1024dff70fc055ca538215d2c8c348beddffd54583d0e8
 cdi_fuel_token_gateway = "0x4ea6ccef1215d9479f1024dff70fc055ca538215d2c8c348beddffd54583d0e8"
