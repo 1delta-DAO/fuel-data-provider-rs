@@ -80,6 +80,7 @@ impl TokenService {
     pub async fn update_liquidity(token_entity: TokenEntity) -> Result<TokenEntity, DbErr> {
         let mut active_model: token::ActiveModel = token_entity.to_model().into();
         active_model.liquidity = Set(Decimal::from_f64(token_entity.liquidity).unwrap());
+        active_model.no_liquidity = Set(token_entity.no_liquidity);
         active_model.liquidity_usd = Set(Decimal::from_f64(token_entity.liquidity_usd).unwrap());
         active_model.updated_at = Set(Utc::now().into());
 

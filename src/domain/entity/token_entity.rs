@@ -21,6 +21,8 @@ pub struct TokenEntity {
     pub decimals: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub high_risk: bool,
+    pub no_liquidity: bool,
     pub quoting: bool,
 }
 
@@ -40,6 +42,8 @@ impl Entity<Model> for TokenEntity {
             decimals: model.decimals.clone(),
             created_at: model.created_at.with_timezone(&Utc),
             updated_at: model.updated_at.with_timezone(&Utc),
+            high_risk: model.high_risk.clone(),
+            no_liquidity: model.no_liquidity.clone(),
             quoting: model.quoting.clone(),
         }
     }
@@ -59,8 +63,8 @@ impl Entity<Model> for TokenEntity {
             decimals: self.decimals.clone(),
             created_at: self.created_at.into(),
             updated_at: self.updated_at.into(),
-            high_risk: false, // Defaulting to `false` as this field is omitted
-            no_liquidity: false, // Defaulting to `false` as this field is omitted
+            high_risk: self.high_risk.clone(),
+            no_liquidity: self.no_liquidity.clone(),
             quoting: self.quoting.clone(),
         }
     }
@@ -82,6 +86,8 @@ impl Default for TokenEntity {
             decimals: 0,
             created_at: Utc::now(),
             updated_at: Utc::now(),
+            high_risk: true,
+            no_liquidity: true,
             quoting: false,
         }
     }
