@@ -25,6 +25,15 @@ impl PriceDataRepository {
             .await
     }
 
+    pub async fn find_all_by_token_id(token_id: &Uuid) -> Result<Vec<Model>, DbErr> {
+        use sea_orm::{EntityTrait, QueryFilter, ColumnTrait};
+
+        price_data::Entity::find()
+            .filter(price_data::Column::TokenId.eq(token_id.to_owned()))
+            .all(&DB_MANAGER.get_connection().await.unwrap())
+            .await
+    }
+
     /// Deletes price data records older than the specified number of minutes
     pub async fn delete_expired() -> Result<u64, DbErr> {
 

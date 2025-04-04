@@ -1,4 +1,5 @@
 use std::time::Duration;
+use crate::config::CONFIG;
 use crate::domain::service::exception::DataException;
 use crate::domain::service::persistence::{PriceDataService, TokenService, VolumeDataService};
 use crate::domain::service::persistence::mira_pools_service::MiraPoolsService;
@@ -77,6 +78,14 @@ impl CalculationManager {
                 if token.liquidity_usd == 0.0 {
                     token.no_liquidity = true;
                 }
+
+                let prices = PriceDataService::find_all_by_token_id(&token.id).await.unwrap();
+
+                token.high_risk=false;
+                if prices.len() < CONFIG.default.high_risk_swaps.into() || token.liquidity_usd < CONFIG.default.high_risk_liquidity.into() {
+                    token.high_risk=true;
+                }
+
                 TokenService::update_liquidity(token.clone()).await.unwrap();
 
 

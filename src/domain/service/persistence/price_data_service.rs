@@ -21,6 +21,12 @@ impl PriceDataService {
         Ok(model.map(|model| PriceDataEntity::from_model(&model)))
     }
 
+    pub async fn find_all_by_token_id(token_id: &Uuid) -> Result<Vec<PriceDataEntity>, DbErr> {
+        let models = PriceDataRepository::find_all_by_token_id(token_id).await?;
+        let entities = models.iter().map(|model| PriceDataEntity::from_model(model)).collect();
+        Ok(entities)
+    }
+
     pub async fn delete_expired() -> Result<u64, DbErr> {
         PriceDataRepository::delete_expired().await
     }

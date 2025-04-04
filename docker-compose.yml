@@ -9,6 +9,7 @@ services:
 #      RUST_LOG: "info"
 #      SERVER_PORT_HTTP: ${SERVER_PORT_HTTP:-8080}
 #      DB_URL: "db:5432/fuel_data"
+#      API_QUERY_SLEEP_TIME: 35
 #    networks:
 #      - fuel-data-provider
   db:
