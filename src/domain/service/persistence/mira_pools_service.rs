@@ -9,7 +9,6 @@ use crate::domain::entity::entity::Entity;
 use crate::domain::entity::mira_pools_entity::MiraPoolsEntity;
 use crate::domain::entity::{TokenEntity, TokenPairsEntity};
 use crate::domain::utils::Converter;
-use crate::ports::db::model::token;
 
 pub struct MiraPoolsService;
 
@@ -103,12 +102,16 @@ impl MiraPoolsService {
                 // Add liquidity for base token
                 let base_token_id = pair.base_token_details_id;
                 let base_liquidity_entry = token_liquidity.entry(base_token_id).or_insert(Decimal::ZERO);
+                log::info!("Base token: {} => {}", pair.base_symbol, base_liquidity_entry);
                 *base_liquidity_entry += pool.reserve_base.clone();
+                log::info!("Base token after increment: {}",base_liquidity_entry );
 
                 // Add liquidity for quote token
                 let quote_token_id = pair.quote_token_details_id;
                 let quote_liquidity_entry = token_liquidity.entry(quote_token_id).or_insert(Decimal::ZERO);
+                log::info!("Quote token: {} => {}", pair.quote_symbol, quote_liquidity_entry);
                 *quote_liquidity_entry += pool.reserve_quote.clone();
+                log::info!("Quote token after increment: {}",quote_liquidity_entry );
             }
         }
 

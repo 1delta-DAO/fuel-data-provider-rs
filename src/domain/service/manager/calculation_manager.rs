@@ -68,7 +68,11 @@ impl CalculationManager {
                         token.liquidity = 0.0;
                     }
                 }
-                token.liquidity_usd = Converter::round_f64(token.liquidity * token.price,token.decimals);
+                if token.quoting{
+                    token.liquidity_usd = Converter::round_f64(token.liquidity,token.decimals);
+                }else{
+                    token.liquidity_usd = Converter::round_f64(token.liquidity * token.price,token.decimals);
+                }
                 TokenService::update_liquidity(token.clone()).await.unwrap();
 
 
