@@ -27,6 +27,8 @@ pub struct DefaultConfig {
     pub high_risk_liquidity: u16,
     pub cdi_fuel_token_gateway: String,
     pub cdi_fuel_token_gateway_dependency: String,
+    pub cdi_meme_token_gateway: String,
+    pub cdi_meme_two_token_gateway: String,
     pub cdi_mira_token_gateway: String,
     pub cdi_mira_amm: String,
     pub mira_swap_event: String,
@@ -62,6 +64,8 @@ pub enum EnvVar {
     HighRiskLiquidity,
     CdiFuelTokenGateway,
     CdiFuelTokenGatewayDependency,
+    CdiMemeTokenGateway,
+    CdiMemeTwoTokenGateway,
     CdiMiraTokenGateway,
     CdiMiraAmm,
     MiraSwapEvent,
@@ -95,6 +99,8 @@ impl fmt::Display for EnvVar {
             EnvVar::HighRiskLiquidity => "HIGH_RISK_LIQUIDITY",
             EnvVar::CdiFuelTokenGateway => "CDI_FUEL_TOKEN_GATEWAY",
             EnvVar::CdiFuelTokenGatewayDependency => "CDI_FUEL_TOKEN_GATEWAY_DEPENDENCY",
+            EnvVar::CdiMemeTokenGateway => "CDI_MEME_TOKEN_GATEWAY",
+            EnvVar::CdiMemeTwoTokenGateway => "CDI_MEME_TWO_TOKEN_GATEWAY",
             EnvVar::CdiMiraTokenGateway => "CDI_MIRA_TOKEN_GATEWAY",
             EnvVar::CdiMiraAmm => "CDI_MIRA_AMM",
             EnvVar::MiraSwapEvent => "MIRA_SWAP_EVENT",
@@ -166,6 +172,8 @@ pub fn load_config_from_env_or_file() -> Result<AppConfig, Box<dyn Error>> {
     config.default.high_risk_liquidity = EnvVar::HighRiskLiquidity.get_value(config.default.high_risk_liquidity);
     config.default.cdi_fuel_token_gateway = EnvVar::CdiFuelTokenGateway.get_value(config.default.cdi_fuel_token_gateway.clone());
     config.default.cdi_fuel_token_gateway_dependency = EnvVar::CdiFuelTokenGatewayDependency.get_value(config.default.cdi_fuel_token_gateway_dependency.clone());
+    config.default.cdi_meme_token_gateway = EnvVar::CdiMemeTokenGateway.get_value(config.default.cdi_meme_token_gateway.clone());
+    config.default.cdi_meme_two_token_gateway = EnvVar::CdiMemeTwoTokenGateway.get_value(config.default.cdi_meme_two_token_gateway.clone());
     config.default.cdi_mira_token_gateway = EnvVar::CdiMiraTokenGateway.get_value(config.default.cdi_mira_token_gateway.clone());
     config.default.cdi_mira_amm = EnvVar::CdiMiraAmm.get_value(config.default.cdi_mira_amm.clone());
     config.default.mira_swap_event = EnvVar::MiraSwapEvent.get_value(config.default.mira_swap_event.clone());

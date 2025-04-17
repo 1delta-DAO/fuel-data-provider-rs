@@ -32,6 +32,11 @@ abigen!(
 );
 
 impl TxSync{
+
+    // pub fn new() -> Self {
+    //     TxSync {}
+    // }
+
     pub async fn synchronize_transactions(runner_id: u8) -> Result<(), Error> {
         let provider_top = Provider::connect(CONFIG.default.rpc_url_one.as_str()).await?;
         let mut wallet = WalletUnlocked::new_random(None);
@@ -516,7 +521,7 @@ async fn is_block_in_calc_window(provider: &Provider, block_number: u64) -> bool
 
 }*/
 
-async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>,Error>{
+pub async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>,Error>{
 
     //log::info!("Fetching mira token details by asset_id: {}",asset_id.to_string());
     let token = TokenService::find_by_address(&asset_id.to_string()).await.unwrap();
@@ -560,63 +565,70 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
                     },
                     None => {
                         log::info!("Mira - No asset found in TG");
-                        log::info!("Checking Fuel Token Gateway ....");
-                        let fuel_contract = ContractId::from_str(CONFIG.default.cdi_fuel_token_gateway.as_str())
-                            .unwrap_or(ContractId::zeroed());
-                        let fuel_gateway = MiraV1Core::new(fuel_contract, wallet);
-                        let bench_contract = Bech32ContractId
-                        ::from(ContractId::from_str(CONFIG.default.cdi_fuel_token_gateway_dependency.as_str())
-                            .unwrap_or(ContractId::zeroed()));
-                        let response = fuel_gateway.methods().name(asset_id.clone()).with_contract_ids(&[bench_contract.clone(),])
-                            .simulate(Execution::StateReadOnly).await;
+                        log::info!("Checking Additional Token Gateways ....");
 
-                        match response{
-                            Ok(call_response) => {
-                                match call_response.value {
-                                    Some(token_name) => {
+                        let gateways = vec![
+                            CONFIG.default.cdi_fuel_token_gateway.clone(),
+                            CONFIG.default.cdi_meme_token_gateway.clone(),
+                            CONFIG.default.cdi_meme_two_token_gateway.clone(),
+                        ];
 
-                                        let token_symbol = fuel_gateway.methods().symbol(asset_id.clone()).with_contract_ids(&[bench_contract.clone(),
-                                        ]).simulate(Execution::StateReadOnly).await?.value.unwrap();
-                                        let token_decimals = fuel_gateway.methods().decimals(asset_id.clone()).with_contract_ids(&[bench_contract.clone(),
-                                        ]).simulate(Execution::StateReadOnly).await?.value.unwrap();
+                        for gateway in gateways{
+                            log::info!("Gateway: {}",gateway);
+                            let fuel_contract = ContractId::from_str(gateway.as_str())
+                                .unwrap_or(ContractId::zeroed());
+                            let fuel_gateway = MiraV1Core::new(fuel_contract, wallet.clone());
+                            let bench_contract = Bech32ContractId
+                            ::from(ContractId::from_str(CONFIG.default.cdi_fuel_token_gateway_dependency.as_str())
+                                .unwrap_or(ContractId::zeroed()));
+                            let response = fuel_gateway.methods().name(asset_id.clone()).with_contract_ids(&[bench_contract.clone(),])
+                                .simulate(Execution::StateReadOnly).await;
 
-                                        let token_entity = TokenEntity {
-                                            id: Uuid::new_v4(),
-                                            address: asset_id.to_string(),
-                                            symbol: token_symbol,
-                                            name: token_name,
-                                            decimals: token_decimals as i32,
-                                            ..Default::default()
-                                        };
-                                        log::info!("Fuel Gateway - All data ready to create new Token entity: {:?}",token_entity);
-                                        Ok(Some(TokenService::create(token_entity).await.unwrap()))
-                                    },
-                                    None => {
-                                        log::info!("No token found in fuel gateway");
-                                        let unknown_token = UnknownTokenEntity {
-                                            id: Uuid::new_v4(),
-                                            address: asset_id.to_string(),
-                                        };
-                                        let _ = UnknownTokenService::create_if_not_exists(unknown_token).await;
-                                        Ok(None)
+                            match response{
+                                Ok(call_response) => {
+                                    match call_response.value {
+                                        Some(token_name) => {
+
+                                            let token_symbol = fuel_gateway.methods().symbol(asset_id.clone()).with_contract_ids(&[bench_contract.clone(),
+                                            ]).simulate(Execution::StateReadOnly).await?.value.unwrap();
+                                            let token_decimals = fuel_gateway.methods().decimals(asset_id.clone()).with_contract_ids(&[bench_contract.clone(),
+                                            ]).simulate(Execution::StateReadOnly).await?.value.unwrap();
+
+                                            let token_entity = TokenEntity {
+                                                id: Uuid::new_v4(),
+                                                address: asset_id.to_string(),
+                                                symbol: token_symbol,
+                                                name: token_name,
+                                                decimals: token_decimals as i32,
+                                                ..Default::default()
+                                            };
+                                            log::info!("Fuel Gateway - All data ready to create new Token entity: {:?}",token_entity);
+                                            return Ok(Some(TokenService::create(token_entity).await.unwrap()))
+                                        },
+                                        None => {
+                                            log::info!("No token found in fuel gateway");
+                                        }
                                     }
+                                },
+                                Err(_e)=>{
+                                    log::info!("Fuel - No asset found - error");
                                 }
-                            },
-                            Err(_e)=>{
-                                log::info!("Fuel - No asset found - ext");
-                                let unknown_token = UnknownTokenEntity{
-                                    id: Uuid::new_v4(),
-                                    address: asset_id.to_string(),
-                                };
-                                let _ = UnknownTokenService::create_if_not_exists(unknown_token).await;
-                                Ok(None)
                             }
+
                         }
+
+                        let unknown_token = UnknownTokenEntity{
+                            id: Uuid::new_v4(),
+                            address: asset_id.to_string(),
+                        };
+                        let _ = UnknownTokenService::create_if_not_exists(unknown_token).await;
+
+                        Ok(None)
                         }
                     }
             }
-            Err(_e) => {
-                log::info!("Mira - No asset found - ext");
+            Err(e) => {
+                log::info!("Mira - Error - No asset found - ext - {}",e.to_string());
                 let unknown_token = UnknownTokenEntity{
                     id: Uuid::new_v4(),
                     address: asset_id.to_string(),

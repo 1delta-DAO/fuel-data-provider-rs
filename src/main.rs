@@ -24,6 +24,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     log::info!("Config: {}", CONFIG.default.server_port_http);
     let _ = DB_MANAGER.initialize().await;
 
+    //
+    // let missing_tokens = vec![
+    //     "1d5d97005e41cae2187a895fd8eab0506111e0e2f3331cd3912c15c24e3c1d82",
+    //     "91b3559edb2619cde8ffb2aa7b3c3be97efd794ea46700db7092abeee62281b0",
+    //     "899e8a1f3326c80be9853977f43aa0579f7d4d3ed072643182402abf593b755d",
+    //     "9faba055d60f126d67b7ea997a052d8fa27a422b6727f6f34603b13b889b8322",
+    //     "2afcfa14b2eb778f08a0cb00995ee91a72e172e005596481e79bcab8b465ee78",
+    //     "71ebe5293dfd31de8b62369487ebf1ed55e645043d54df91b8be596c02fa44f9",
+    //     "a917ed563e47fe60994f758560e8b3b5876c3d6bab73149ce9412d9d5ba91988"
+    // ];
+    //
+    // let sync = TxSync::new();
+    //
+    // let provider = Provider::connect(CONFIG.default.rpc_url_one.as_str()).await?;
+    //
+    // for address in missing_tokens{
+    //     log::info!("Address: {}", address);
+    //     let asset = AssetId::from_str(address).unwrap();
+    //     get_mira_token_details_by_asset_id(&provider,&asset).await?;
+    //     log::info!("Address: {} - OK", address);
+    // }
+
     let tx_sync_handle = tokio::spawn(async{
         let mut retry_count = 0;
         loop{
