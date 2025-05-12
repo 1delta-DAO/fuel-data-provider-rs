@@ -5,6 +5,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use sea_orm::prelude::Decimal;
 use uuid::Uuid;
 
+#[derive(serde::Serialize)]
 pub struct PriceDataEntity {
     pub id: Uuid,
     pub token_id: Uuid,

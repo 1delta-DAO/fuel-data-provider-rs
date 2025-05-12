@@ -3,7 +3,7 @@ use std::convert::Infallible;
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use warp::{Rejection, Reply};
 use warp::http::StatusCode;
-use crate::domain::service::persistence::{SyncStatusService, TokenService};
+use crate::domain::service::persistence::{SyncStatusService, TokenService, PriceDataService};
 
 /*
 `getNewTokens(start:number, end:number)`
@@ -179,6 +179,49 @@ pub async fn get_top_volume(params: CountQueryParams) -> Result<impl Reply, Infa
     }
 }
 
+pub async fn get_token_prices(params: TokenAddressParams) -> Result<impl Reply, Infallible> {
+    // First get the token by address
+    match TokenService::find_by_address(&params.address).await {
+        Ok(Some(token)) => {
+            // Then get all price records for this token
+            match PriceDataService::find_all_by_token_id(&token.id).await {
+                Ok(prices) => {
+                    // Mapuj PriceDataEntity na PriceDataDto
+                    let price_dtos: Vec<PriceDataDto> = prices.into_iter()
+                        .map(|p| PriceDataDto {
+                            price: p.price,
+                            timestamp: p.timestamp,
+                        })
+                        .collect();
+                    
+                    Ok(warp::reply::with_status(
+                        warp::reply::json(&price_dtos),
+                        StatusCode::OK,
+                    ))
+                },
+                Err(err) => {
+                    log::error!("Error fetching token prices: {:?}", err);
+                    Ok(warp::reply::with_status(
+                        warp::reply::json(&"Internal server error"),
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                    ))
+                }
+            }
+        },
+        Ok(None) => Ok(warp::reply::with_status(
+            warp::reply::json(&"Token not found"),
+            StatusCode::NOT_FOUND,
+        )),
+        Err(err) => {
+            log::error!("Error fetching token: {:?}", err);
+            Ok(warp::reply::with_status(
+                warp::reply::json(&"Internal server error"),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
+        }
+    }
+}
+
 #[derive(Debug, serde::Deserialize)]
 pub struct QueryParams {
     start: String,
@@ -193,6 +236,17 @@ pub struct AddressQueryParams {
 #[derive(Debug, serde::Deserialize)]
 pub struct CountQueryParams {
     count: usize,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct TokenAddressParams {
+    address: String,
+}
+
+#[derive(serde::Serialize)]
+struct PriceDataDto {
+    price: f64,
+    timestamp: DateTime<Utc>,
 }
 
 fn parse_datetime(datetime_str: &str) -> Option<DateTime<Utc>> {

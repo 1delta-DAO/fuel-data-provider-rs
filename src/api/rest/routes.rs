@@ -1,7 +1,7 @@
 use warp::{Filter, Rejection, Reply};
 use warp::http::StatusCode;
 use warp::reject::Reject;
-use crate::api::rest::endpoint::{get_status, get_tokens, get_tokens_by_address, get_tokens_by_time_range, get_top_gainers, get_top_losers, get_top_volume, CountQueryParams, QueryParams};
+use crate::api::rest::endpoint::{get_status, get_token_prices, get_tokens, get_tokens_by_address, get_tokens_by_time_range, get_top_gainers, get_top_losers, get_top_volume, CountQueryParams, QueryParams, TokenAddressParams};
 use crate::config::CONFIG;
 
 pub fn routes() -> warp::filters::BoxedFilter<(impl warp::Reply,)> {
@@ -30,6 +30,11 @@ pub fn routes() -> warp::filters::BoxedFilter<(impl warp::Reply,)> {
         .and(warp::body::json())
         .and_then(get_tokens_by_address);
 
+    let get_token_prices = warp::path!("tokens" / "prices")
+        .and(warp::get())
+        .and(warp::query::<TokenAddressParams>())
+        .and_then(get_token_prices);
+
     let tokens_route = warp::path!("tokens")
         .and(warp::get())
         .and_then(get_tokens);
@@ -46,6 +51,7 @@ pub fn routes() -> warp::filters::BoxedFilter<(impl warp::Reply,)> {
                 .or(get_top_volume)
                 .or(get_tokens_by_time)
                 .or(get_tokens_by_address)
+                .or(get_token_prices)
                 .or(tokens_route)
                 .or(status_route),
         )
