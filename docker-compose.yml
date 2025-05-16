@@ -5,6 +5,7 @@ services:
 #    build: .
 #    ports:
 #      - "${SERVER_PORT_HTTP:-8080}:8080"
+#    restart: unless-stopped
 #    environment:
 #      RUST_LOG: "info"
 #      SERVER_PORT_HTTP: ${SERVER_PORT_HTTP:-8080}

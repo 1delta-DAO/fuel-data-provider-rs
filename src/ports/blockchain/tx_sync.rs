@@ -38,7 +38,7 @@ impl TxSync{
         wallet.set_provider(provider_top.clone());
 
         //let mut start_block:u32 = provider.latest_block_height().await?; // get_start_block_number().await;
-        let mut start_block:u32 = get_start_block_number().await;
+        let mut start_block:u32 = get_start_block_number(&provider_top).await;
         log::info!("TXS-{}: Starting from block: {}",runner_id,start_block);
         let start_block_time = get_block_time_by_block_height(&provider_top, start_block).await;
 
@@ -62,7 +62,7 @@ impl TxSync{
                 }
             }*/
 
-            start_block = get_start_block_number().await;
+            start_block = get_start_block_number(&provider).await;
 
             //return Ok(());
 
@@ -78,7 +78,7 @@ impl TxSync{
                     let start = Instant::now();
                     //log::info!("TXS-{}: - Block {} - Start",runner_id,block_height, start.elapsed());
 
-                    if is_block_in_calc_window(&provider, block_height as u64).await {
+                    if is_block_in_calc_window(&provider, block_height).await {
                         //let block = provider.block_by_height(BlockHeight::from(block_height)).await?;
                         //log::info!("TXS-{}: - Block {} - Start - block found {:?}",runner_id,block_height, start.elapsed());
                         let mut pair_swaps_vec: Vec<PairSwapsEntity> = Vec::new();
@@ -95,7 +95,7 @@ impl TxSync{
 
                                 log::info!("Block {} - Swaps: {}",block_height,swaps.len());
 
-                                let block_time = BlockchainDataService::get_block_time(&provider, &(block_height as u64)).await.unwrap();
+                                let block_time = BlockchainDataService::get_block_time(&provider, &(block_height)).await.unwrap();
 
                                 for swap in swaps {
 
@@ -398,7 +398,7 @@ async fn get_block_time_by_block_height(provider: &Provider, block_height: u32) 
     Ok(block.unwrap().header.time.unwrap())
 }
 
-async fn get_start_block_number() ->u32 {
+async fn get_start_block_number(provider: &Provider) -> u32 {
     let mut block_number: u32;
     match SyncStatusService::get_status().await {
         Ok(Some(sync_status_entity)) => {
@@ -410,10 +410,26 @@ async fn get_start_block_number() ->u32 {
     if block_number <= 1{
         block_number = CONFIG.default.tx_log_start_block_number.clone() as u32;
     }
+
+    let start_block_number = block_number.clone();
+
+    let mut block_time_distance = BlockchainDataService::get_minutes_since_block(provider,&block_number).await.unwrap();
+    while block_time_distance > CONFIG.default.calculation_window as i64{
+        block_number = block_number + 1;
+        block_time_distance = BlockchainDataService::get_minutes_since_block(provider,&block_number).await.unwrap();
+        log::info!("Block time distance out of the range: {}",block_time_distance);
+    }
+
+    if start_block_number < block_number {
+        log::info!("Config start block number: {}",start_block_number);
+        log::info!("New start block number: {}",block_number);
+        let _ = SyncStatusService::update_block_number((block_number-1) as i32).await;
+    }
+
     block_number
 }
 
-async fn is_block_in_calc_window(provider: &Provider, block_number: u64) -> bool{
+async fn is_block_in_calc_window(provider: &Provider, block_number: u32) -> bool{
     // Fetch the block time
     let block_time_result = BlockchainDataService::get_block_time(provider, &block_number).await;
 
@@ -435,86 +451,6 @@ async fn is_block_in_calc_window(provider: &Provider, block_number: u64) -> bool
     // Check if the block_time is within the calculation window
     block_time >= cutoff_time
 }
-
-/*async fn get_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>, Error>{
-
-    log::info!("Fetching token details by asset_id: {}",asset_id.to_string());
-    let token = TokenService::find_by_address(&asset_id.to_string()).await.unwrap();
-
-    if token.is_some(){
-        //log::info!("Token found in DB");
-        Ok(token)
-    }
-    else{
-        log::info!("Token not found - fetching from gateway ....");
-
-        let mut wallet = WalletUnlocked::new_random(None);
-        wallet.set_provider(provider.clone());
-
-        let contract_id = ContractId::from_str(CONFIG.default.cdi_fuel_token_gateway.as_str()).unwrap_or(ContractId::zeroed());
-        let fuel_token_gateway = FuelTokenGateway::new(contract_id, wallet);
-
-        //TODO: There has to be more efficient way to take all this data at once
-
-
-        let bench_contract = Bech32ContractId
-        ::from(ContractId::from_str(CONFIG.default.cdi_fuel_token_gateway_dependency.as_str())
-            .unwrap_or(ContractId::zeroed()));
-
-        let response = fuel_token_gateway.methods().name(asset_id.clone()).with_contract_ids(&[bench_contract.clone(),
-        ]).simulate(Execution::StateReadOnly).await;
-        //log::info!("TOKEN FROM GATEWAY {:?}",response);
-
-        match response{
-            Ok(call_response) => {
-                match call_response.value {
-                    Some(token_name) => {
-                        let token_symbol = fuel_token_gateway.methods().symbol(asset_id.clone()).with_contract_ids(&[bench_contract.clone(),
-                        ]).simulate(Execution::StateReadOnly).await?.value.unwrap();
-
-                        let token_decimals = fuel_token_gateway.methods().decimals(asset_id.clone()).with_contract_ids(&[bench_contract.clone(),
-                        ]).simulate(Execution::StateReadOnly).await?.value.unwrap();
-
-                        let token_entity = TokenEntity{
-                            id: Uuid::new_v4(),
-                            address: asset_id.to_string(),
-                            symbol: token_symbol,
-                            name: token_name,
-                            decimals: token_decimals as i32,
-                            ..Default::default()
-                        };
-                        log::info!("All data ready to create new Token entity: {:?}",token_entity);
-                        Ok(Some(TokenService::create(token_entity).await.unwrap()))
-                    },
-                    None => {
-                        log::info!("No asset found - int - switch to Mira");
-                        if let Some(token_entity) = get_mira_token_details_by_asset_id(provider,asset_id).await?{
-                         Ok(Some(token_entity))
-                        }else{
-                            Ok(None)
-                        }
-
-                    },
-                }
-            }
-            Err(_e) => {
-                log::info!("No asset found - ext - switch to Mira");
-
-                if let Some(token_entity) = get_mira_token_details_by_asset_id(provider,asset_id).await?{
-                    Ok(Some(token_entity))
-                }else{
-                    let unknown_token = UnknownTokenEntity{
-                        id: Uuid::new_v4(),
-                        address: asset_id.to_string(),
-                    };
-                    let _ = UnknownTokenService::create_if_not_exists(unknown_token).await;
-                    Ok(None)
-                }
-            }
-        }
-    }
-
-}*/
 
 async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>,Error>{
 

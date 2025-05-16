@@ -8,18 +8,18 @@ use crate::domain::service::exception::DataException;
 use crate::domain::service::persistence::SyncStatusService;
 
 struct CalcWindow {
-    start_block_number: u64,
+    start_block_number: u32,
     start_block_time: DateTime<Utc>,
-    end_block_number: u64,
+    end_block_number: u32,
     end_block_time: DateTime<Utc>,
     //updated_at: DateTime<Utc>, - we should update sync status with this
 }
 
 #[derive(Clone)]
 pub struct BlockRange {
-    pub start_block_number: u64,
+    pub start_block_number: u32,
     pub start_block_time: DateTime<Utc>,
-    pub end_block_number: u64,
+    pub end_block_number: u32,
     pub end_block_time: DateTime<Utc>,
 }
 
@@ -54,14 +54,14 @@ impl BlockchainDataService{
         let sync_status = SyncStatusService::get_status()
             .await.unwrap().ok_or("No sync status service found.").unwrap();
 
-        let start_block_number: u64;
+        let start_block_number: u32;
         let mut start_block_time: Option<DateTime<Utc>>;
 
-        let end_block_number = provider.latest_block_height().await.unwrap() as u64;
+        let end_block_number = provider.latest_block_height().await.unwrap();
         let end_block_time = provider.latest_block_time().await.unwrap().unwrap();
 
         if sync_status.block_time != None {
-            start_block_number = sync_status.block_number as u64;
+            start_block_number = sync_status.block_number as u32;
             start_block_time = sync_status.block_time;
         }
         else{
@@ -88,7 +88,7 @@ impl BlockchainDataService{
         block_range
     }
 
-    pub async fn get_block_time(provider: &Provider,block_number: &u64) -> Result<DateTime<Utc>, DataException> {
+    pub async fn get_block_time(provider: &Provider, block_number: &u32) -> Result<DateTime<Utc>, DataException> {
         {
             // Lock the CALC_WINDOW to read the current calculation window data
             let calc_window = CALC_WINDOW.lock().await;
@@ -133,6 +133,17 @@ impl BlockchainDataService{
         //log::info!("Block: {} - time: {}",block_number,estimated_time);
 
         Ok(estimated_time)
+    }
+
+    pub async fn get_minutes_since_block(provider: &Provider, block_number: &u32) -> Result<i64, DataException> {
+        match Self::get_block_time(provider, block_number).await {
+            Ok(block_time) => {
+                let now = Utc::now();
+                let duration_since_block = now.signed_duration_since(block_time);
+                Ok(duration_since_block.num_minutes())
+            }
+            Err(e) => Err(e),
+        }
     }
 
 }
