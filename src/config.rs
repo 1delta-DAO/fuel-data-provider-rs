@@ -20,7 +20,7 @@ pub struct DefaultConfig {
     pub rpc_url_one: String,
     pub rpc_url_two: String,
     pub rpc_url_three: String,
-    pub tx_log_start_block_number: u64,
+    pub tx_log_start_block_number: u32,
     pub calculation_window: u16,
     pub api_query_sleep_time: u16,
     pub high_risk_swaps: u16,

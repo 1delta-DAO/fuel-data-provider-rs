@@ -209,7 +209,7 @@ impl FuelRpcService {
             // Update cache from the last cached block (or requested block if cache is empty)
             let start_block = latest_cached_block.map(|b| b + 1).unwrap_or(requested_block);
 
-            let cache_start_time = BlockchainDataService::get_block_time(&self.providers[0].clone(), &(start_block as u64)).await.unwrap();
+            let cache_start_time = BlockchainDataService::get_block_time(&self.providers[0].clone(), &(start_block)).await.unwrap();
 
             log::info!(
                 "Updating cache from block {} to {} - we are {} minutes behind",
