@@ -2,8 +2,8 @@ use crate::ports::db::model::sync_status;
 use crate::ports::db::model::sync_status::Model;
 use crate::ports::db::repository::CrudRepository;
 use async_trait::async_trait;
-use sea_orm::ActiveValue::Set;
 use chrono::Utc;
+use sea_orm::ActiveValue::Set;
 use sea_orm::{ActiveValue, DbErr, IntoActiveModel};
 use uuid::Uuid;
 
@@ -47,5 +47,4 @@ impl SyncStatusRepository {
 
         Ok(())
     }
-
 }

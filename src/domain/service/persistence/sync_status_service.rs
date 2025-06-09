@@ -1,12 +1,12 @@
-use crate::domain::entity::sync_status_entity::SyncStatusEntity;
-use sea_orm::DbErr;
 use crate::domain::entity::entity::Entity;
+use crate::domain::entity::sync_status_entity::SyncStatusEntity;
 use crate::ports::db::repository::SyncStatusRepository;
+use sea_orm::DbErr;
 
 pub struct SyncStatusService;
 
 #[allow(dead_code)]
-impl SyncStatusService{
+impl SyncStatusService {
     pub async fn get_status() -> Result<Option<SyncStatusEntity>, DbErr> {
         match SyncStatusRepository::get_status().await {
             Ok(Some(model)) => Ok(Some(SyncStatusEntity::from_model(&model))),

@@ -1,11 +1,11 @@
+use crate::config::CONFIG;
+use crate::domain::service::exception::DataException;
+use crate::domain::service::persistence::SyncStatusService;
 use chrono::{DateTime, Utc};
 use fuels::prelude::Provider;
 use fuels::types::BlockHeight;
 use once_cell::sync::Lazy;
 use tokio::sync::Mutex;
-use crate::config::CONFIG;
-use crate::domain::service::exception::DataException;
-use crate::domain::service::persistence::SyncStatusService;
 
 struct CalcWindow {
     start_block_number: u32,
@@ -36,8 +36,7 @@ static CALC_WINDOW: Lazy<Mutex<CalcWindow>> = Lazy::new(|| {
 
 pub struct BlockchainDataService;
 
-impl BlockchainDataService{
-
+impl BlockchainDataService {
     pub async fn refresh_calc_data(block_range: BlockRange) {
         let mut block_data = CALC_WINDOW.lock().await;
         *block_data = CalcWindow {
@@ -52,7 +51,10 @@ impl BlockchainDataService{
     /// Fetches block range and updates `CALC_WINDOW`
     pub async fn get_block_range(provider: &Provider) -> BlockRange {
         let sync_status = SyncStatusService::get_status()
-            .await.unwrap().ok_or("No sync status service found.").unwrap();
+            .await
+            .unwrap()
+            .ok_or("No sync status service found.")
+            .unwrap();
 
         let start_block_number: u32;
         let mut start_block_time: Option<DateTime<Utc>>;
@@ -63,15 +65,19 @@ impl BlockchainDataService{
         if sync_status.block_time != None {
             start_block_number = sync_status.block_number as u32;
             start_block_time = sync_status.block_time;
-        }
-        else{
+        } else {
             //No data in sync - cold start from config
             start_block_number = CONFIG.default.tx_log_start_block_number.clone();
             start_block_time = None;
             if start_block_number.clone() > 0 {
                 start_block_time = provider
                     .block_by_height(BlockHeight::new(start_block_number.clone() as u32))
-                    .await.unwrap().ok_or("Start block not found").unwrap().header.time;
+                    .await
+                    .unwrap()
+                    .ok_or("Start block not found")
+                    .unwrap()
+                    .header
+                    .time;
             }
         }
 
@@ -88,7 +94,10 @@ impl BlockchainDataService{
         block_range
     }
 
-    pub async fn get_block_time(provider: &Provider, block_number: &u32) -> Result<DateTime<Utc>, DataException> {
+    pub async fn get_block_time(
+        provider: &Provider,
+        block_number: &u32,
+    ) -> Result<DateTime<Utc>, DataException> {
         {
             // Lock the CALC_WINDOW to read the current calculation window data
             let calc_window = CALC_WINDOW.lock().await;
@@ -99,8 +108,9 @@ impl BlockchainDataService{
                 drop(calc_window);
 
                 // Refresh the calculation window using the latest data
-                //log::info!("Refreshing block range - provider query");
-                let _ = BlockchainDataService::refresh_calc_data(BlockchainDataService::get_block_range(provider).await);
+                let _ = BlockchainDataService::refresh_calc_data(
+                    BlockchainDataService::get_block_range(provider).await,
+                );
             }
         }
 
@@ -108,7 +118,9 @@ impl BlockchainDataService{
         let calc_window = CALC_WINDOW.lock().await;
 
         // Validate that the block number is within the updated range
-        if *block_number < calc_window.start_block_number || *block_number > calc_window.end_block_number {
+        if *block_number < calc_window.start_block_number
+            || *block_number > calc_window.end_block_number
+        {
             return Err(DataException::BlockTimeEstimatorError(format!(
                 "Block number {} is out of the calculated range ({} - {}).",
                 block_number, calc_window.start_block_number, calc_window.end_block_number
@@ -130,12 +142,13 @@ impl BlockchainDataService{
         let estimated_time = calc_window.start_block_time
             + chrono::Duration::milliseconds((time_per_block * block_offset) as i64);
 
-        //log::info!("Block: {} - time: {}",block_number,estimated_time);
-
         Ok(estimated_time)
     }
 
-    pub async fn get_minutes_since_block(provider: &Provider, block_number: &u32) -> Result<i64, DataException> {
+    pub async fn get_minutes_since_block(
+        provider: &Provider,
+        block_number: &u32,
+    ) -> Result<i64, DataException> {
         match Self::get_block_time(provider, block_number).await {
             Ok(block_time) => {
                 let now = Utc::now();
@@ -145,5 +158,4 @@ impl BlockchainDataService{
             Err(e) => Err(e),
         }
     }
-
 }

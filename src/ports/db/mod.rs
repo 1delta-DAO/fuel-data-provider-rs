@@ -1,4 +1,4 @@
-pub mod repository;
+pub mod database_manager;
 #[allow(unused_imports)]
 pub mod model;
-pub mod database_manager;
+pub mod repository;

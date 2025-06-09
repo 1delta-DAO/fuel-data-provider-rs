@@ -35,11 +35,6 @@ impl Entity<Model> for PriceDataEntity {
 
 impl Default for PriceDataEntity {
     fn default() -> Self {
-        Self {
-            id: Uuid::new_v4(),
-            token_id: Uuid::new_v4(),
-            price: 0.0,
-            timestamp: Utc::now(),
-        }
+        Self { id: Uuid::new_v4(), token_id: Uuid::new_v4(), price: 0.0, timestamp: Utc::now() }
     }
 }

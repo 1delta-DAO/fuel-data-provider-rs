@@ -1,9 +1,9 @@
+use crate::domain::service::persistence::{PriceDataService, SyncStatusService, TokenService};
+use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use std::collections::HashSet;
 use std::convert::Infallible;
-use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
-use warp::{Rejection, Reply};
 use warp::http::StatusCode;
-use crate::domain::service::persistence::{SyncStatusService, TokenService, PriceDataService};
+use warp::{Rejection, Reply};
 
 /*
 `getNewTokens(start:number, end:number)`
@@ -24,10 +24,9 @@ use crate::domain::service::persistence::{SyncStatusService, TokenService, Price
 
 pub async fn get_status() -> Result<impl Reply, Infallible> {
     match SyncStatusService::get_status().await {
-        Ok(Some(sync_status)) => Ok(warp::reply::with_status(
-            warp::reply::json(&sync_status),
-            StatusCode::OK,
-        )),
+        Ok(Some(sync_status)) => {
+            Ok(warp::reply::with_status(warp::reply::json(&sync_status), StatusCode::OK))
+        }
         Ok(None) => Ok(warp::reply::with_status(
             warp::reply::json(&"No sync status found"),
             StatusCode::NOT_FOUND,
@@ -43,7 +42,6 @@ pub async fn get_status() -> Result<impl Reply, Infallible> {
 }
 
 pub async fn get_tokens() -> Result<impl warp::Reply, Infallible> {
-
     match TokenService::find_all_tokens().await {
         Ok(tokens) => Ok(warp::reply::with_status(
             warp::reply::json(&tokens),
@@ -61,21 +59,18 @@ pub async fn get_tokens() -> Result<impl warp::Reply, Infallible> {
 
 pub async fn get_tokens_by_time_range(params: QueryParams) -> Result<impl Reply, Rejection> {
     match (parse_datetime(&params.start), parse_datetime(&params.end)) {
-        (Some(start), Some(end)) => {
-            match TokenService::find_by_created_between(start, end).await {
-                Ok(tokens) => Ok(warp::reply::with_status(
-                    warp::reply::json(&tokens),
-                    warp::http::StatusCode::OK,
-                )),
-                Err(err) => {
-                    log::error!("Failed to fetch tokens by time range: {:?}", err);
-                    Ok(warp::reply::with_status(
-                        warp::reply::json(&"Internal server error"),
-                        warp::http::StatusCode::INTERNAL_SERVER_ERROR,
-                    ))
-                }
+        (Some(start), Some(end)) => match TokenService::find_by_created_between(start, end).await {
+            Ok(tokens) => {
+                Ok(warp::reply::with_status(warp::reply::json(&tokens), warp::http::StatusCode::OK))
             }
-        }
+            Err(err) => {
+                log::error!("Failed to fetch tokens by time range: {:?}", err);
+                Ok(warp::reply::with_status(
+                    warp::reply::json(&"Internal server error"),
+                    warp::http::StatusCode::INTERNAL_SERVER_ERROR,
+                ))
+            }
+        },
         _ => Ok(warp::reply::with_status(
             warp::reply::json(&"Invalid date format"),
             warp::http::StatusCode::BAD_REQUEST,
@@ -93,9 +88,8 @@ pub async fn get_tokens_by_address(params: AddressQueryParams) -> Result<impl Re
     }
 
     // Filter out empty or invalid addresses
-    let addresses: HashSet<String> = params.addresses.into_iter()
-        .filter(|addr| !addr.trim().is_empty())
-        .collect();
+    let addresses: HashSet<String> =
+        params.addresses.into_iter().filter(|addr| !addr.trim().is_empty()).collect();
 
     if addresses.is_empty() {
         return Ok(warp::reply::with_status(
@@ -106,10 +100,7 @@ pub async fn get_tokens_by_address(params: AddressQueryParams) -> Result<impl Re
 
     // Query the database for the valid addresses
     match TokenService::find_by_addresses(addresses.into_iter().collect()).await {
-        Ok(tokens) => Ok(warp::reply::with_status(
-            warp::reply::json(&tokens),
-            StatusCode::OK,
-        )),
+        Ok(tokens) => Ok(warp::reply::with_status(warp::reply::json(&tokens), StatusCode::OK)),
         Err(err) => {
             log::error!("Error fetching tokens by addresses: {:?}", err);
             Ok(warp::reply::with_status(
@@ -126,11 +117,8 @@ pub async fn get_top_gainers(params: CountQueryParams) -> Result<impl Reply, Inf
     match TokenService::find_biggest_gainers().await {
         Ok(tokens) => {
             let limited_tokens = tokens.into_iter().take(params.count).collect::<Vec<_>>();
-            Ok(warp::reply::with_status(
-                warp::reply::json(&limited_tokens),
-                StatusCode::OK,
-            ))
-        },
+            Ok(warp::reply::with_status(warp::reply::json(&limited_tokens), StatusCode::OK))
+        }
         Err(err) => {
             log::error!("Error fetching top gainers: {:?}", err);
             Ok(warp::reply::with_status(
@@ -145,11 +133,8 @@ pub async fn get_top_losers(params: CountQueryParams) -> Result<impl Reply, Infa
     match TokenService::find_biggest_losers().await {
         Ok(tokens) => {
             let limited_tokens = tokens.into_iter().take(params.count).collect::<Vec<_>>();
-            Ok(warp::reply::with_status(
-                warp::reply::json(&limited_tokens),
-                StatusCode::OK,
-            ))
-        },
+            Ok(warp::reply::with_status(warp::reply::json(&limited_tokens), StatusCode::OK))
+        }
         Err(err) => {
             log::error!("Error fetching top losers: {:?}", err);
             Ok(warp::reply::with_status(
@@ -164,11 +149,8 @@ pub async fn get_top_volume(params: CountQueryParams) -> Result<impl Reply, Infa
     match TokenService::find_highest_volume().await {
         Ok(tokens) => {
             let limited_tokens = tokens.into_iter().take(params.count).collect::<Vec<_>>();
-            Ok(warp::reply::with_status(
-                warp::reply::json(&limited_tokens),
-                StatusCode::OK,
-            ))
-        },
+            Ok(warp::reply::with_status(warp::reply::json(&limited_tokens), StatusCode::OK))
+        }
         Err(err) => {
             log::error!("Error fetching top volume tokens: {:?}", err);
             Ok(warp::reply::with_status(
@@ -187,18 +169,13 @@ pub async fn get_token_prices(params: TokenAddressParams) -> Result<impl Reply, 
             match PriceDataService::find_all_by_token_id(&token.id).await {
                 Ok(prices) => {
                     // Mapuj PriceDataEntity na PriceDataDto
-                    let price_dtos: Vec<PriceDataDto> = prices.into_iter()
-                        .map(|p| PriceDataDto {
-                            price: p.price,
-                            timestamp: p.timestamp,
-                        })
+                    let price_dtos: Vec<PriceDataDto> = prices
+                        .into_iter()
+                        .map(|p| PriceDataDto { price: p.price, timestamp: p.timestamp })
                         .collect();
-                    
-                    Ok(warp::reply::with_status(
-                        warp::reply::json(&price_dtos),
-                        StatusCode::OK,
-                    ))
-                },
+
+                    Ok(warp::reply::with_status(warp::reply::json(&price_dtos), StatusCode::OK))
+                }
                 Err(err) => {
                     log::error!("Error fetching token prices: {:?}", err);
                     Ok(warp::reply::with_status(
@@ -207,7 +184,7 @@ pub async fn get_token_prices(params: TokenAddressParams) -> Result<impl Reply, 
                     ))
                 }
             }
-        },
+        }
         Ok(None) => Ok(warp::reply::with_status(
             warp::reply::json(&"Token not found"),
             StatusCode::NOT_FOUND,

@@ -1,8 +1,8 @@
+use crate::domain::entity::entity::Entity;
+use crate::domain::entity::{TokenEntity, TokenPairsEntity};
 use crate::ports::db::repository::{CrudRepository, TokenPairsRepository};
 use sea_orm::{DbErr, IntoActiveModel};
 use uuid::Uuid;
-use crate::domain::entity::entity::Entity;
-use crate::domain::entity::{TokenEntity, TokenPairsEntity};
 
 pub struct TokenPairsService;
 
@@ -13,7 +13,10 @@ impl TokenPairsService {
         base_token_details_id: uuid::Uuid,
         quote_token_details_id: uuid::Uuid,
     ) -> Result<Option<TokenPairsEntity>, DbErr> {
-        if let Some(model) = TokenPairsRepository::find_by_token_ids(base_token_details_id, quote_token_details_id).await? {
+        if let Some(model) =
+            TokenPairsRepository::find_by_token_ids(base_token_details_id, quote_token_details_id)
+                .await?
+        {
             Ok(Some(TokenPairsEntity::from_model(&model)))
         } else {
             Ok(None)
@@ -53,7 +56,8 @@ impl TokenPairsService {
         };
 
         // Save the new pair
-        let created_model = TokenPairsRepository::create(new_pair.to_model().into_active_model()).await?;
+        let created_model =
+            TokenPairsRepository::create(new_pair.to_model().into_active_model()).await?;
         Ok(TokenPairsEntity::from_model(&created_model))
     }
 
@@ -66,7 +70,8 @@ impl TokenPairsService {
 
     /// Updates an existing token pair
     pub async fn update(token_pair: TokenPairsEntity) -> Result<TokenPairsEntity, DbErr> {
-        let active_model: crate::ports::db::model::token_pairs::ActiveModel = token_pair.to_model().into();
+        let active_model: crate::ports::db::model::token_pairs::ActiveModel =
+            token_pair.to_model().into();
         let updated_model = TokenPairsRepository::update(active_model).await?;
         Ok(TokenPairsEntity::from_model(&updated_model))
     }

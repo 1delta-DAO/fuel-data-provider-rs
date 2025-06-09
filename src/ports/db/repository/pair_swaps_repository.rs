@@ -1,13 +1,16 @@
-use crate::ports::db::model::{pair_swaps, sync_status};
+use crate::config::CONFIG;
+use crate::ports::db::database_manager::DB_MANAGER;
 use crate::ports::db::model::pair_swaps::Model;
+use crate::ports::db::model::{pair_swaps, sync_status};
 use crate::ports::db::repository::CrudRepository;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use sea_orm::{DbErr, EntityTrait, ColumnTrait, QueryFilter, TransactionTrait, ActiveValue, IntoActiveModel, ActiveModelTrait};
 use sea_orm::ActiveValue::Set;
+use sea_orm::{
+    ActiveModelTrait, ActiveValue, ColumnTrait, DbErr, EntityTrait, IntoActiveModel, QueryFilter,
+    TransactionTrait,
+};
 use uuid::Uuid;
-use crate::config::CONFIG;
-use crate::ports::db::database_manager::DB_MANAGER;
 
 pub struct PairSwapsRepository;
 
@@ -26,18 +29,15 @@ impl PairSwapsRepository {
         // Begin a transaction
         let txn = db.begin().await?;
 
-        if records.len()>0{
+        if records.len() > 0 {
             // Insert the pair_swaps records within the transaction
-            let result = pair_swaps::Entity::insert_many(records)
-                .exec(&txn)
-                .await;
+            let result = pair_swaps::Entity::insert_many(records).exec(&txn).await;
 
             if result.is_err() {
                 txn.rollback().await?;
-                log::info!("ERROR: {:?}",result);
+                log::info!("ERROR: {:?}", result);
                 return Err(result.unwrap_err());
             }
-
         }
 
         // Fetch or create SyncStatus record
@@ -56,14 +56,13 @@ impl PairSwapsRepository {
         updated_sync_status.block_number = Set(block_number);
         updated_sync_status.block_time = Set(Some(block_time).map(|t| t.into()));
         updated_sync_status.updated_at = Set(Utc::now().into());
-        //log::info!("Sync status: {:?}",updated_sync_status);
+
         // Save updated SyncStatus within the transaction
         if updated_sync_status.update(&txn).await.is_err() {
             txn.rollback().await?;
             return Err(DbErr::Custom("Failed to update sync status".into()));
         }
 
-        //log::info!("Sync status updated: block_number = {}, block_time = {}", block_number, block_time);
         // Commit transaction if all operations are successful
         txn.commit().await?;
 
@@ -90,8 +89,8 @@ impl PairSwapsRepository {
 
     /// Deletes pair swaps data records older than the specified number of minutes
     pub async fn delete_expired() -> Result<u64, DbErr> {
-        use sea_orm::{Condition, prelude::*};
-        use chrono::{Utc, Duration};
+        use chrono::{Duration, Utc};
+        use sea_orm::{prelude::*, Condition};
 
         let minutes = CONFIG.default.calculation_window as i64;
 
