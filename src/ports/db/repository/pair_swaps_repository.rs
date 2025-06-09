@@ -24,10 +24,7 @@ impl PairSwapsRepository {
         block_number: i32,
         block_time: DateTime<Utc>,
     ) -> Result<(), DbErr> {
-        let db = crate::ports::db::database_manager::DB_MANAGER
-            .get_connection()
-            .await
-            .unwrap();
+        let db = crate::ports::db::database_manager::DB_MANAGER.get_connection().await.unwrap();
 
         // Begin a transaction
         let txn = db.begin().await?;
@@ -76,21 +73,13 @@ impl PairSwapsRepository {
     pub async fn find_by_pair_id(pair_id: Uuid) -> Result<Vec<Model>, DbErr> {
         pair_swaps::Entity::find()
             .filter(pair_swaps::Column::PairId.eq(pair_id))
-            .all(
-                &crate::ports::db::database_manager::DB_MANAGER
-                    .get_connection()
-                    .await
-                    .unwrap(),
-            )
+            .all(&crate::ports::db::database_manager::DB_MANAGER.get_connection().await.unwrap())
             .await
     }
 
     /// Finds all records with the given block_number
     pub async fn find_by_block_number(block_number: i32) -> Result<Vec<Model>, DbErr> {
-        let db = crate::ports::db::database_manager::DB_MANAGER
-            .get_connection()
-            .await
-            .unwrap();
+        let db = crate::ports::db::database_manager::DB_MANAGER.get_connection().await.unwrap();
 
         pair_swaps::Entity::find()
             .filter(pair_swaps::Column::BlockNumber.eq(block_number.to_string()))

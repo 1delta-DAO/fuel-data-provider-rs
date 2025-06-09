@@ -1,8 +1,8 @@
 use crate::domain::entity::entity::Entity;
+use crate::domain::entity::UnknownTokenEntity;
 use crate::ports::db::model::unknown_token::{self};
 use crate::ports::db::repository::{CrudRepository, UnknownTokenRepository};
 use sea_orm::{DbErr, IntoActiveModel};
-use crate::domain::entity::UnknownTokenEntity;
 
 pub struct UnknownTokenService;
 
@@ -25,7 +25,9 @@ impl UnknownTokenService {
     }
 
     /// Creates a new token only if it does not exist
-    pub async fn create_if_not_exists(token_entity: UnknownTokenEntity) -> Result<Option<UnknownTokenEntity>, DbErr> {
+    pub async fn create_if_not_exists(
+        token_entity: UnknownTokenEntity,
+    ) -> Result<Option<UnknownTokenEntity>, DbErr> {
         if Self::find_by_address(&token_entity.address).await?.is_none() {
             Ok(Some(Self::create(token_entity).await?))
         } else {

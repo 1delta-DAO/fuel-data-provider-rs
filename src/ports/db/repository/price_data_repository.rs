@@ -1,22 +1,21 @@
-use crate::ports::db::repository::CrudRepository;
-use async_trait::async_trait;
-use sea_orm::DbErr;
-use uuid::Uuid;
 use crate::config::CONFIG;
 use crate::ports::db::database_manager::DB_MANAGER;
 use crate::ports::db::model::price_data;
 use crate::ports::db::model::price_data::Model;
-use sea_orm::{Condition, prelude::*};
-use chrono::{Utc, Duration};
+use crate::ports::db::repository::CrudRepository;
+use async_trait::async_trait;
+use chrono::{Duration, Utc};
+use sea_orm::DbErr;
+use sea_orm::{prelude::*, Condition};
+use uuid::Uuid;
 
 pub struct PriceDataRepository;
 
 #[async_trait]
 impl CrudRepository<price_data::Entity> for PriceDataRepository {}
 impl PriceDataRepository {
-
     pub async fn find_oldest_by_token_id(token_id: &Uuid) -> Result<Option<Model>, DbErr> {
-        use sea_orm::{EntityTrait, QueryFilter, QueryOrder, ColumnTrait};
+        use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QueryOrder};
 
         price_data::Entity::find()
             .filter(price_data::Column::TokenId.eq(token_id.to_owned()))
@@ -26,7 +25,7 @@ impl PriceDataRepository {
     }
 
     pub async fn find_all_by_token_id(token_id: &Uuid) -> Result<Vec<Model>, DbErr> {
-        use sea_orm::{EntityTrait, QueryFilter, ColumnTrait};
+        use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 
         price_data::Entity::find()
             .filter(price_data::Column::TokenId.eq(token_id.to_owned()))
@@ -36,7 +35,6 @@ impl PriceDataRepository {
 
     /// Deletes price data records older than the specified number of minutes
     pub async fn delete_expired() -> Result<u64, DbErr> {
-
         let minutes = CONFIG.default.calculation_window as i64;
 
         // Calculate the cutoff timestamp (current time minus specified minutes)
@@ -54,5 +52,4 @@ impl PriceDataRepository {
         // Return the number of rows affected
         Ok(delete_result.rows_affected)
     }
-
 }

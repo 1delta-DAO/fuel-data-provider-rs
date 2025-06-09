@@ -1,8 +1,12 @@
-use warp::{Filter, Rejection, Reply};
+use crate::api::rest::endpoint::{
+    get_status, get_token_prices, get_tokens, get_tokens_by_address, get_tokens_by_time_range,
+    get_top_gainers, get_top_losers, get_top_volume, CountQueryParams, QueryParams,
+    TokenAddressParams,
+};
+use crate::config::CONFIG;
 use warp::http::StatusCode;
 use warp::reject::Reject;
-use crate::api::rest::endpoint::{get_status, get_token_prices, get_tokens, get_tokens_by_address, get_tokens_by_time_range, get_top_gainers, get_top_losers, get_top_volume, CountQueryParams, QueryParams, TokenAddressParams};
-use crate::config::CONFIG;
+use warp::{Filter, Rejection, Reply};
 
 pub fn routes() -> warp::filters::BoxedFilter<(impl warp::Reply,)> {
     let get_top_gainers = warp::path!("tokens" / "top-gainers")
@@ -35,13 +39,9 @@ pub fn routes() -> warp::filters::BoxedFilter<(impl warp::Reply,)> {
         .and(warp::query::<TokenAddressParams>())
         .and_then(get_token_prices);
 
-    let tokens_route = warp::path!("tokens")
-        .and(warp::get())
-        .and_then(get_tokens);
+    let tokens_route = warp::path!("tokens").and(warp::get()).and_then(get_tokens);
 
-    let status_route = warp::path!("status")
-        .and(warp::get())
-        .and_then(get_status);
+    let status_route = warp::path!("status").and(warp::get()).and_then(get_status);
 
     warp::any()
         .and(with_api_key())
@@ -75,12 +75,11 @@ struct Unauthorized;
 
 impl Reject for Unauthorized {}
 
-pub async fn handle_rejection(err: warp::Rejection) -> Result<impl Reply, std::convert::Infallible> {
+pub async fn handle_rejection(
+    err: warp::Rejection,
+) -> Result<impl Reply, std::convert::Infallible> {
     if err.find::<Unauthorized>().is_some() {
-        Ok(warp::reply::with_status(
-            "1Delta.IO - Backend: Unauthorized",
-            StatusCode::UNAUTHORIZED,
-        ))
+        Ok(warp::reply::with_status("1Delta.IO - Backend: Unauthorized", StatusCode::UNAUTHORIZED))
     } else {
         Ok(warp::reply::with_status(
             "1Delta.IO - Backend: Internal Server Error",

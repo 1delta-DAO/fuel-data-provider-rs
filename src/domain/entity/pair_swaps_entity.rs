@@ -5,7 +5,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use sea_orm::prelude::Decimal;
 use uuid::Uuid;
 
-#[derive(Debug,Eq, Hash, PartialEq, Clone)]
+#[derive(Debug, Eq, Hash, PartialEq, Clone)]
 pub struct PairSwapsEntity {
     pub id: Uuid,
     pub block_number: String,
@@ -21,7 +21,6 @@ pub struct PairSwapsEntity {
 
 impl Entity<Model> for PairSwapsEntity {
     fn from_model(model: &Model) -> Self {
-
         let block_time: Option<DateTime<Utc>> = model.block_time.map(|bt| bt.with_timezone(&Utc));
 
         Self {

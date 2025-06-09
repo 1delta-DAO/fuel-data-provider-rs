@@ -20,14 +20,8 @@ impl TokenRepository {
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<Vec<Model>, DbErr> {
-        let db = &crate::ports::db::database_manager::DB_MANAGER
-            .get_connection()
-            .await
-            .unwrap();
-        token::Entity::find()
-            .filter(token::Column::CreatedAt.between(start, end))
-            .all(db)
-            .await
+        let db = &crate::ports::db::database_manager::DB_MANAGER.get_connection().await.unwrap();
+        token::Entity::find().filter(token::Column::CreatedAt.between(start, end)).all(db).await
     }
 
     /// Finds tokens by a list of addresses
@@ -36,54 +30,33 @@ impl TokenRepository {
             return Ok(vec![]);
         }
 
-        let db = &crate::ports::db::database_manager::DB_MANAGER
-            .get_connection()
-            .await
-            .unwrap();
+        let db = &crate::ports::db::database_manager::DB_MANAGER.get_connection().await.unwrap();
 
-        let condition = addresses.iter().fold(Condition::any(), |c, addr| {
-            c.add(token::Column::Address.eq(addr.clone()))
-        });
+        let condition = addresses
+            .iter()
+            .fold(Condition::any(), |c, addr| c.add(token::Column::Address.eq(addr.clone())));
 
         token::Entity::find().filter(condition).all(db).await
     }
 
     /// Finds tokens sorted by price_change24 in ascending order (losers)
     pub async fn find_sorted_by_price_change_asc() -> Result<Vec<Model>, DbErr> {
-        let db = &crate::ports::db::database_manager::DB_MANAGER
-            .get_connection()
-            .await
-            .unwrap();
+        let db = &crate::ports::db::database_manager::DB_MANAGER.get_connection().await.unwrap();
 
-        token::Entity::find()
-            .order_by(token::Column::PriceChange24, Order::Asc)
-            .all(db)
-            .await
+        token::Entity::find().order_by(token::Column::PriceChange24, Order::Asc).all(db).await
     }
 
     /// Finds tokens sorted by price_change24 in descending order (gainers)
     pub async fn find_sorted_by_price_change_desc() -> Result<Vec<Model>, DbErr> {
-        let db = &crate::ports::db::database_manager::DB_MANAGER
-            .get_connection()
-            .await
-            .unwrap();
+        let db = &crate::ports::db::database_manager::DB_MANAGER.get_connection().await.unwrap();
 
-        token::Entity::find()
-            .order_by(token::Column::PriceChange24, Order::Desc)
-            .all(db)
-            .await
+        token::Entity::find().order_by(token::Column::PriceChange24, Order::Desc).all(db).await
     }
 
     /// Finds tokens sorted by volume24 in descending order (highest volume first)
     pub async fn find_sorted_by_volume_desc() -> Result<Vec<Model>, DbErr> {
-        let db = &crate::ports::db::database_manager::DB_MANAGER
-            .get_connection()
-            .await
-            .unwrap();
+        let db = &crate::ports::db::database_manager::DB_MANAGER.get_connection().await.unwrap();
 
-        token::Entity::find()
-            .order_by(token::Column::Volume24Usd, Order::Desc)
-            .all(db)
-            .await
+        token::Entity::find().order_by(token::Column::Volume24Usd, Order::Desc).all(db).await
     }
 }

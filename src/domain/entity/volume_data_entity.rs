@@ -32,10 +32,6 @@ impl Entity<Model> for VolumeDataEntity {
 
 impl Default for VolumeDataEntity {
     fn default() -> Self {
-        Self {
-            timestamp: Utc::now(),
-            token_id: Uuid::new_v4(),
-            volume: 0.0,
-        }
+        Self { timestamp: Utc::now(), token_id: Uuid::new_v4(), volume: 0.0 }
     }
 }

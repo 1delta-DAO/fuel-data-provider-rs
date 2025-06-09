@@ -1,10 +1,10 @@
-use chrono::{DateTime, Utc};
+use crate::domain::entity::entity::Entity;
 use crate::domain::entity::pair_swaps_entity::PairSwapsEntity;
 use crate::ports::db::model::pair_swaps::Model;
+use crate::ports::db::repository::{CrudRepository, PairSwapsRepository};
+use chrono::{DateTime, Utc};
 use sea_orm::DbErr;
 use uuid::Uuid;
-use crate::domain::entity::entity::Entity;
-use crate::ports::db::repository::{CrudRepository, PairSwapsRepository};
 
 /// Service layer for handling operations related to `PairSwapsEntity`
 pub struct PairSwapsService;
@@ -18,13 +18,14 @@ impl PairSwapsService {
     }
 
     /// Inserts multiple records into the database using domain entities
-    pub async fn create_many_with_sync(entities: Vec<PairSwapsEntity>,
-                             block_number: i32,
-                             block_time: DateTime<Utc>
+    pub async fn create_many_with_sync(
+        entities: Vec<PairSwapsEntity>,
+        block_number: i32,
+        block_time: DateTime<Utc>,
     ) -> Result<(), DbErr> {
         let active_models: Vec<Model> = entities.into_iter().map(|e| e.to_model()).collect();
         let active_models: Vec<_> = active_models.into_iter().map(Into::into).collect();
-        PairSwapsRepository::insert_many_with_sync(active_models,block_number,block_time).await
+        PairSwapsRepository::insert_many_with_sync(active_models, block_number, block_time).await
     }
 
     /// Retrieves all records from the database and converts them to domain entities

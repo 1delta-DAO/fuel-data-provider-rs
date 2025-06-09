@@ -1,8 +1,8 @@
+use crate::ports::db::model::unknown_token;
+use crate::ports::db::model::unknown_token::Model;
 use crate::ports::db::repository::CrudRepository;
 use async_trait::async_trait;
 use sea_orm::DbErr;
-use crate::ports::db::model::unknown_token;
-use crate::ports::db::model::unknown_token::Model;
 
 pub struct UnknownTokenRepository;
 

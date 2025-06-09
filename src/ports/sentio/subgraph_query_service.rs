@@ -122,11 +122,7 @@ impl SubgraphQueryService {
         })?;
         log::info!("parsed_response: `{:?}`", parsed_response);
 
-        let rows = parsed_response
-            .sync_sql_response
-            .result
-            .rows
-            .unwrap_or_default();
+        let rows = parsed_response.sync_sql_response.result.rows.unwrap_or_default();
         Ok(rows)
     }
 }

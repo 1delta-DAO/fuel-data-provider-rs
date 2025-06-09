@@ -1,48 +1,53 @@
-use std::collections::HashMap;
-use std::str::FromStr;
-use std::time::{Duration, Instant};
-use chrono::{DateTime, Utc};
-use fuels::prelude::{abigen, Bech32ContractId, Error, Execution, Provider, WalletUnlocked};
-use fuels::types::{AssetId, BlockHeight, ContractId};
-use sea_orm::DbErr;
-use sea_orm::prelude::Decimal;
-use uuid::Uuid;
 use crate::config::CONFIG;
-use crate::domain::entity::{PriceDataEntity, TokenEntity, TokenPairsEntity, UnknownTokenEntity, VolumeDataEntity};
 use crate::domain::entity::mira_pools_entity::MiraPoolsEntity;
 use crate::domain::entity::pair_swaps_entity::PairSwapsEntity;
-use crate::domain::service::persistence::{PairSwapsService, PriceDataService, SyncStatusService, TokenPairsService, TokenService, UnknownTokenService, VolumeDataService};
+use crate::domain::entity::{
+    PriceDataEntity, TokenEntity, TokenPairsEntity, UnknownTokenEntity, VolumeDataEntity,
+};
 use crate::domain::service::persistence::mira_pools_service::MiraPoolsService;
+use crate::domain::service::persistence::{
+    PairSwapsService, PriceDataService, SyncStatusService, TokenPairsService, TokenService,
+    UnknownTokenService, VolumeDataService,
+};
 use crate::domain::utils::Converter;
 use crate::ports::blockchain::blockchain_data_service::BlockchainDataService;
 use crate::ports::blockchain::fuel_model::Pool;
 use crate::ports::blockchain::FuelRpcService;
+use chrono::{DateTime, Utc};
+use fuels::prelude::{abigen, Bech32ContractId, Error, Execution, Provider, WalletUnlocked};
+use fuels::types::{AssetId, BlockHeight, ContractId};
+use sea_orm::prelude::Decimal;
+use sea_orm::DbErr;
+use std::collections::HashMap;
+use std::str::FromStr;
+use std::time::{Duration, Instant};
+use uuid::Uuid;
 
 pub struct TxSync;
 
 abigen!(
     Contract(
-       name = "FuelTokenGateway",
+        name = "FuelTokenGateway",
         abi = "resources/abi/fuel_token_gateway/out/debug/bridge_fungible_token-abi.json",
     ),
     Contract(
-       name = "MiraV1Core",
+        name = "MiraV1Core",
         abi = "resources/abi/mira_amm_contract/out/debug/mira_amm_contract-abi.json"
     ),
 );
 
-impl TxSync{
+impl TxSync {
     pub async fn synchronize_transactions(runner_id: u8) -> Result<(), Error> {
         let provider_top = Provider::connect(CONFIG.default.rpc_url_one.as_str()).await?;
         let mut wallet = WalletUnlocked::new_random(None);
         wallet.set_provider(provider_top.clone());
 
         //let mut start_block:u32 = provider.latest_block_height().await?; // get_start_block_number().await;
-        let mut start_block:u32 = get_start_block_number(&provider_top).await;
-        log::info!("TXS-{}: Starting from block: {}",runner_id,start_block);
+        let mut start_block: u32 = get_start_block_number(&provider_top).await;
+        log::info!("TXS-{}: Starting from block: {}", runner_id, start_block);
         let start_block_time = get_block_time_by_block_height(&provider_top, start_block).await;
 
-        log::info!("TXS-{}: - Start block time: {:?}",runner_id,start_block_time);
+        log::info!("TXS-{}: - Start block time: {:?}", runner_id, start_block_time);
 
         let fuel_rpc_service = FuelRpcService::new().await?;
 
@@ -50,12 +55,11 @@ impl TxSync{
             let provider = Provider::connect(CONFIG.default.rpc_url_one.as_str()).await?;
             let current_block = provider.latest_block_height().await? - 2; //Errors in RPC
 
-            log::info!("TXS-{}: - Current block: {}",runner_id,current_block);
+            log::info!("TXS-{}: - Current block: {}", runner_id, current_block);
 
             start_block = get_start_block_number(&provider).await;
 
             if current_block > start_block {
-
                 let mut updated_pairs: HashMap<Uuid, TokenPairsEntity> = HashMap::new();
 
                 for block_height in start_block..=current_block {
@@ -64,81 +68,116 @@ impl TxSync{
                     if is_block_in_calc_window(&provider, block_height).await {
                         let mut pair_swaps_vec: Vec<PairSwapsEntity> = Vec::new();
 
-                        if PairSwapsService::exists_by_block_number(block_height as i32).await{
-                            log::info!("TXS-{}: - Block {} - PairSwaps already exists - skipped - ut:{:?}",runner_id,block_height, start.elapsed());
+                        if PairSwapsService::exists_by_block_number(block_height as i32).await {
+                            log::info!(
+                                "TXS-{}: - Block {} - PairSwaps already exists - skipped - ut:{:?}",
+                                runner_id,
+                                block_height,
+                                start.elapsed()
+                            );
                             continue;
                         }
 
                         let swaps = fuel_rpc_service.get_logs(block_height).await?;
 
-                            if !swaps.is_empty(){
+                        if !swaps.is_empty() {
+                            log::info!("Block {} - Swaps: {}", block_height, swaps.len());
 
-                                log::info!("Block {} - Swaps: {}",block_height,swaps.len());
+                            let block_time =
+                                BlockchainDataService::get_block_time(&provider, &(block_height))
+                                    .await
+                                    .unwrap();
 
-                                let block_time = BlockchainDataService::get_block_time(&provider, &(block_height)).await.unwrap();
+                            for swap in swaps {
+                                let pool = Pool::from_swap(&swap.swap_event).unwrap();
+                                let token_base = get_mira_token_details_by_asset_id(
+                                    &provider,
+                                    &AssetId::from_str(pool.token0_address.as_str()).unwrap(),
+                                )
+                                .await
+                                .unwrap_or(None);
+                                if let Some(ref token_base) = token_base {
+                                    let token_quote = get_mira_token_details_by_asset_id(
+                                        &provider,
+                                        &AssetId::from_str(pool.token1_address.as_str()).unwrap(),
+                                    )
+                                    .await
+                                    .unwrap_or(None);
 
-                                for swap in swaps {
+                                    if let Some(ref token_quote) = token_quote {
+                                        let token_pair =
+                                            find_or_create_pair(token_base, token_quote)
+                                                .await
+                                                .unwrap();
+                                        updated_pairs.insert(token_pair.id, token_pair.clone());
 
-                                    let pool = Pool::from_swap(&swap.swap_event).unwrap();
-                                    let token_base
-                                        = get_mira_token_details_by_asset_id(&provider,&AssetId::from_str(pool.token0_address.as_str()).unwrap()).await.unwrap_or(None);
-                                    if let Some(ref token_base) = token_base{
-                                        let token_quote
-                                            = get_mira_token_details_by_asset_id(&provider,&AssetId::from_str(pool.token1_address.as_str()).unwrap()).await.unwrap_or(None);
+                                        let pair_swap = PairSwapsEntity {
+                                            id: Uuid::new_v4(),
+                                            block_number: block_height.to_string(),
+                                            block_time: Some(block_time),
+                                            tx_id: swap.tx_id,
+                                            utxo_id: "".to_string(),
+                                            pair_id: token_pair.id,
+                                            base_amount: swap.swap_event.asset_0_in,
+                                            quote_amount: swap.swap_event.asset_1_out,
+                                            created_at: Utc::now(),
+                                            updated_at: Utc::now(),
+                                        };
 
-                                        if let Some(ref token_quote) = token_quote {
-                                            let token_pair = find_or_create_pair(
-                                                token_base,token_quote).await.unwrap();
-                                            updated_pairs.insert(token_pair.id,token_pair.clone());
-
-                                            let pair_swap = PairSwapsEntity{
-                                                id: Uuid::new_v4(),
-                                                block_number: block_height.to_string(),
-                                                block_time: Some(block_time),
-                                                tx_id: swap.tx_id,
-                                                utxo_id: "".to_string(),
-                                                pair_id: token_pair.id,
-                                                base_amount: swap.swap_event.asset_0_in,
-                                                quote_amount: swap.swap_event.asset_1_out,
-                                                created_at: Utc::now(),
-                                                updated_at: Utc::now(),
-                                            };
-
-                                            if swap.swap_event.asset_0_in !=0
-                                            {
-                                                add_volume(token_base,token_quote,&pair_swap).await.unwrap();
-                                                add_price(token_base,token_quote,&pair_swap).await.unwrap();
-                                                pair_swaps_vec.push(pair_swap);
-
-                                            }
-                                            else{
-                                                log::info!("Amount: {},{} : {},{}",swap.swap_event.asset_0_in,swap.swap_event.asset_0_in,swap.swap_event.asset_1_out,swap.swap_event.asset_1_out);
-                                            }
-
-
+                                        if swap.swap_event.asset_0_in != 0 {
+                                            add_volume(token_base, token_quote, &pair_swap)
+                                                .await
+                                                .unwrap();
+                                            add_price(token_base, token_quote, &pair_swap)
+                                                .await
+                                                .unwrap();
+                                            pair_swaps_vec.push(pair_swap);
+                                        } else {
+                                            log::info!(
+                                                "Amount: {},{} : {},{}",
+                                                swap.swap_event.asset_0_in,
+                                                swap.swap_event.asset_0_in,
+                                                swap.swap_event.asset_1_out,
+                                                swap.swap_event.asset_1_out
+                                            );
                                         }
                                     }
                                 }
-                                log::info!("TXS-{}: - Block {} - PairSwaps: {}",runner_id,block_height,pair_swaps_vec.len());
-                                let _ = PairSwapsService::create_many_with_sync(pair_swaps_vec, block_height as i32,block_time).await;
-                                fuel_rpc_service.remove_from_cache(block_height as u32).await;
-                            }else {
-                                let _ = SyncStatusService::update_block_number(block_height as i32).await;
-                                fuel_rpc_service.remove_from_cache(block_height as u32).await;
-                                continue;
                             }
+                            log::info!(
+                                "TXS-{}: - Block {} - PairSwaps: {}",
+                                runner_id,
+                                block_height,
+                                pair_swaps_vec.len()
+                            );
+                            let _ = PairSwapsService::create_many_with_sync(
+                                pair_swaps_vec,
+                                block_height as i32,
+                                block_time,
+                            )
+                            .await;
+                            fuel_rpc_service.remove_from_cache(block_height as u32).await;
+                        } else {
+                            let _ =
+                                SyncStatusService::update_block_number(block_height as i32).await;
+                            fuel_rpc_service.remove_from_cache(block_height as u32).await;
+                            continue;
+                        }
                         //}
-                    }
-                    else{
-                        log::info!("TXS-{}: Block {} out of calc window - skipped - ut:{:?}",runner_id,block_height, start.elapsed());
+                    } else {
+                        log::info!(
+                            "TXS-{}: Block {} out of calc window - skipped - ut:{:?}",
+                            runner_id,
+                            block_height,
+                            start.elapsed()
+                        );
                         let _ = SyncStatusService::update_block_number(block_height as i32).await;
                         fuel_rpc_service.remove_from_cache(block_height as u32).await;
                     }
-
                 }
 
-                if updated_pairs.len() > 0{
-                    for (_id,pair) in &updated_pairs{
+                if updated_pairs.len() > 0 {
+                    for (_id, pair) in &updated_pairs {
                         find_or_create_mira_pool(pair.id).await;
                     }
                 }
@@ -146,8 +185,6 @@ impl TxSync{
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
     }
-
-
 }
 
 pub async fn add_volume(
@@ -165,37 +202,26 @@ pub async fn add_volume(
 
     let base_amount = Converter::round_f64(
         pair_swap.base_amount as f64 / 10f32.powi(token_base.decimals) as f64,
-    token_base.decimals);
+        token_base.decimals,
+    );
 
-    let volume_base = VolumeDataEntity {
-        timestamp,
-        token_id: token_base.id,
-        volume: base_amount,
-    };
+    let volume_base = VolumeDataEntity { timestamp, token_id: token_base.id, volume: base_amount };
 
     if let Err(err) = VolumeDataService::create_or_update(volume_base.clone()).await {
-        log::error!(
-            "Failed to update volume for base token {}: {:?}",
-            token_base.id, err
-        );
+        log::error!("Failed to update volume for base token {}: {:?}", token_base.id, err);
         return Err(err);
     }
 
     let quote_amount = Converter::round_f64(
-        pair_swap.quote_amount as f64 / 10f32.powi(token_quote.decimals) as f64
-    ,token_quote.decimals);
+        pair_swap.quote_amount as f64 / 10f32.powi(token_quote.decimals) as f64,
+        token_quote.decimals,
+    );
 
-    let volume_quote = VolumeDataEntity {
-        timestamp,
-        token_id: token_quote.id,
-        volume: quote_amount,
-    };
+    let volume_quote =
+        VolumeDataEntity { timestamp, token_id: token_quote.id, volume: quote_amount };
 
     if let Err(err) = VolumeDataService::create_or_update(volume_quote.clone()).await {
-        log::error!(
-            "Failed to update volume for quote token {}: {:?}",
-            token_quote.id, err
-        );
+        log::error!("Failed to update volume for quote token {}: {:?}", token_quote.id, err);
         return Err(err);
     }
 
@@ -224,26 +250,26 @@ pub async fn add_price(
         token_base.decimals,
         token_quote.decimals,
         token_base.quoting,
-        token_quote.quoting);
-
+        token_quote.quoting
+    );
 
     let base_amount_decimal = pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals);
     let quote_amount_decimal = pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals);
 
-    let base_price = Converter::round_f64(
-        quote_amount_decimal / base_amount_decimal,
-        token_quote.decimals
-    );
+    let base_price =
+        Converter::round_f64(quote_amount_decimal / base_amount_decimal, token_quote.decimals);
 
-    let quote_price = Converter::round_f64(
-        base_amount_decimal / quote_amount_decimal,
-        token_base.decimals
-    );
+    let quote_price =
+        Converter::round_f64(base_amount_decimal / quote_amount_decimal, token_base.decimals);
 
     log::info!(
         "Calculated prices - base_price: {} {}/{}, quote_price: {} {}/{}",
-        base_price, token_quote.symbol, token_base.symbol,
-        quote_price, token_base.symbol, token_quote.symbol
+        base_price,
+        token_quote.symbol,
+        token_base.symbol,
+        quote_price,
+        token_base.symbol,
+        token_quote.symbol
     );
 
     match (token_base.quoting, token_quote.quoting) {
@@ -261,33 +287,38 @@ pub async fn add_price(
             log::warn!(
                 "Price update: neither {} nor {} are quoting tokens",
                 token_base.symbol,
-                token_quote.symbol);
+                token_quote.symbol
+            );
             if token_base.price > 0.0 && token_quote.price > 0.0 {
                 // Both tokens have prices, use the one with more recent updated_at
                 if token_base.updated_at > token_quote.updated_at {
                     // Base token has more recent price, use it to calculate quote token price
-                    let quote_price = token_base.price * (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals)) /
-                        (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals));
-                    log::info!("Quote Price: {}",quote_price);
+                    let quote_price = token_base.price
+                        * (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals))
+                        / (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals));
+                    log::info!("Quote Price: {}", quote_price);
                     update_token_price(token_quote, quote_price, timestamp).await?;
                 } else {
                     // Quote token has more recent price, use it to calculate base token price
-                    let base_price = token_quote.price * (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals)) /
-                        (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals));
-                    log::info!("Base Price: {}",base_price);
+                    let base_price = token_quote.price
+                        * (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals))
+                        / (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals));
+                    log::info!("Base Price: {}", base_price);
                     update_token_price(token_base, base_price, timestamp).await?;
                 }
             } else if token_base.price > 0.0 {
                 // Only base token has a price, use it to calculate quote token price
-                let quote_price = token_base.price * (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals)) /
-                    (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals));
-                log::info!("Quote Price: {}",quote_price);
+                let quote_price = token_base.price
+                    * (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals))
+                    / (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals));
+                log::info!("Quote Price: {}", quote_price);
                 update_token_price(token_quote, quote_price, timestamp).await?;
             } else if token_quote.price > 0.0 {
                 // Only quote token has a price, use it to calculate base token price
-                let base_price = token_quote.price * (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals)) /
-                    (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals));
-                log::info!("Base Price: {}",base_price);
+                let base_price = token_quote.price
+                    * (pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals))
+                    / (pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals));
+                log::info!("Base Price: {}", base_price);
                 update_token_price(token_base, base_price, timestamp).await?;
             } else {
                 log::warn!(
@@ -301,12 +332,15 @@ pub async fn add_price(
     Ok(())
 }
 
-async fn update_token_price(token: &TokenEntity, new_price: f64, timestamp: DateTime<Utc>) -> Result<(), DbErr> {
+async fn update_token_price(
+    token: &TokenEntity,
+    new_price: f64,
+    timestamp: DateTime<Utc>,
+) -> Result<(), DbErr> {
     let mut token_update = token.clone();
     token_update.updated_at = Utc::now();
 
-    let new_price_rounded = Converter::round_f64(
-        new_price,token.decimals);
+    let new_price_rounded = Converter::round_f64(new_price, token.decimals);
 
     token_update.price = new_price;
     let _updated_token = TokenService::update_price(token_update).await?;
@@ -320,40 +354,38 @@ async fn update_token_price(token: &TokenEntity, new_price: f64, timestamp: Date
     Ok(())
 }
 
-async fn find_or_create_pair(base_token: &TokenEntity, quote_token: &TokenEntity) -> Option<TokenPairsEntity> {
-    match TokenPairsService::find_or_create_pair(&base_token, &quote_token).await{
-        Ok(token_pair) =>{
-            Some(token_pair)
-        }
-        Err(err)=>{
+async fn find_or_create_pair(
+    base_token: &TokenEntity,
+    quote_token: &TokenEntity,
+) -> Option<TokenPairsEntity> {
+    match TokenPairsService::find_or_create_pair(&base_token, &quote_token).await {
+        Ok(token_pair) => Some(token_pair),
+        Err(err) => {
             log::error!("Error while finding or creating token pair: {}", err);
             None
         }
     }
-
 }
 
-async fn find_or_create_mira_pool(pair_id: Uuid) -> Option<MiraPoolsEntity>{
-
-    match MiraPoolsService::find_or_create(pair_id).await{
-        Ok(mira_pool)=>{
+async fn find_or_create_mira_pool(pair_id: Uuid) -> Option<MiraPoolsEntity> {
+    match MiraPoolsService::find_or_create(pair_id).await {
+        Ok(mira_pool) => {
             //refresh
             Some(refresh_mira_pool(mira_pool).await)
         }
-        Err(_err)=>{
-            None
-        }
+        Err(_err) => None,
     }
-
-
 }
 
-async fn refresh_mira_pool(mira_pool: MiraPoolsEntity) -> MiraPoolsEntity{
+async fn refresh_mira_pool(mira_pool: MiraPoolsEntity) -> MiraPoolsEntity {
     get_mira_pool_metadata(mira_pool).await
 }
 
-async fn get_block_time_by_block_height(provider: &Provider, block_height: u32) -> fuels::prelude::Result<DateTime<Utc>> {
-    log::info!("Fetching block time by block height: {}",block_height);
+async fn get_block_time_by_block_height(
+    provider: &Provider,
+    block_height: u32,
+) -> fuels::prelude::Result<DateTime<Utc>> {
+    log::info!("Fetching block time by block height: {}", block_height);
     let block = provider.block_by_height(BlockHeight::new(block_height.clone())).await?;
     Ok(block.unwrap().header.time.unwrap())
 }
@@ -361,35 +393,39 @@ async fn get_block_time_by_block_height(provider: &Provider, block_height: u32) 
 async fn get_start_block_number(provider: &Provider) -> u32 {
     let mut block_number: u32;
     match SyncStatusService::get_status().await {
-        Ok(Some(sync_status_entity)) => {
-            block_number = sync_status_entity.block_number as u32 +1
-        },
-        Ok(None) => { block_number = 0;},
-        Err(_) => { block_number = 0; },//TODO - Exception management
+        Ok(Some(sync_status_entity)) => block_number = sync_status_entity.block_number as u32 + 1,
+        Ok(None) => {
+            block_number = 0;
+        }
+        Err(_) => {
+            block_number = 0;
+        } //TODO - Exception management
     }
-    if block_number <= 1{
+    if block_number <= 1 {
         block_number = CONFIG.default.tx_log_start_block_number.clone() as u32;
     }
 
     let start_block_number = block_number.clone();
 
-    let mut block_time_distance = BlockchainDataService::get_minutes_since_block(provider,&block_number).await.unwrap();
-    while block_time_distance > CONFIG.default.calculation_window as i64{
+    let mut block_time_distance =
+        BlockchainDataService::get_minutes_since_block(provider, &block_number).await.unwrap();
+    while block_time_distance > CONFIG.default.calculation_window as i64 {
         block_number = block_number + 1;
-        block_time_distance = BlockchainDataService::get_minutes_since_block(provider,&block_number).await.unwrap();
-        log::info!("Block time distance out of the range: {}",block_time_distance);
+        block_time_distance =
+            BlockchainDataService::get_minutes_since_block(provider, &block_number).await.unwrap();
+        log::info!("Block time distance out of the range: {}", block_time_distance);
     }
 
     if start_block_number < block_number {
-        log::info!("Config start block number: {}",start_block_number);
-        log::info!("New start block number: {}",block_number);
-        let _ = SyncStatusService::update_block_number((block_number-1) as i32).await;
+        log::info!("Config start block number: {}", start_block_number);
+        log::info!("New start block number: {}", block_number);
+        let _ = SyncStatusService::update_block_number((block_number - 1) as i32).await;
     }
 
     block_number
 }
 
-async fn is_block_in_calc_window(provider: &Provider, block_number: u32) -> bool{
+async fn is_block_in_calc_window(provider: &Provider, block_number: u32) -> bool {
     // Fetch the block time
     let block_time_result = BlockchainDataService::get_block_time(provider, &block_number).await;
 
@@ -412,14 +448,15 @@ async fn is_block_in_calc_window(provider: &Provider, block_number: u32) -> bool
     block_time >= cutoff_time
 }
 
-async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>,Error>{
-
+async fn get_mira_token_details_by_asset_id(
+    provider: &Provider,
+    asset_id: &AssetId,
+) -> Result<Option<TokenEntity>, Error> {
     let token = TokenService::find_by_address(&asset_id.to_string()).await.unwrap();
 
-    if token.is_some(){
+    if token.is_some() {
         Ok(token)
-    }
-    else{
+    } else {
         log::info!("Token not found - fetching from gateway ....");
 
         let mut wallet = WalletUnlocked::new_random(None);
@@ -431,98 +468,125 @@ async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &Asset
 
         //TODO: There has to be more efficient way to take all this data at once
 
-        let response = mira_contract.methods().name(asset_id.clone())
-        .simulate(Execution::StateReadOnly).await;
+        let response =
+            mira_contract.methods().name(asset_id.clone()).simulate(Execution::StateReadOnly).await;
 
-        match response{
-            Ok(call_response) => {
-                match call_response.value {
-                    Some(token_name) => {
-                        let token_symbol = mira_contract.methods().symbol(asset_id.clone()).simulate(Execution::StateReadOnly).await?.value.unwrap();
-                        let token_decimals = mira_contract.methods().decimals(asset_id.clone()).simulate(Execution::StateReadOnly).await?.value.unwrap();
+        match response {
+            Ok(call_response) => match call_response.value {
+                Some(token_name) => {
+                    let token_symbol = mira_contract
+                        .methods()
+                        .symbol(asset_id.clone())
+                        .simulate(Execution::StateReadOnly)
+                        .await?
+                        .value
+                        .unwrap();
+                    let token_decimals = mira_contract
+                        .methods()
+                        .decimals(asset_id.clone())
+                        .simulate(Execution::StateReadOnly)
+                        .await?
+                        .value
+                        .unwrap();
 
-                        let token_entity = TokenEntity{
-                            id: Uuid::new_v4(),
-                            address: asset_id.to_string(),
-                            symbol: token_symbol,
-                            name: token_name,
-                            decimals: token_decimals as i32,
-                            ..Default::default()
-                        };
-                        log::info!("Mira - All data ready to create new Token entity: {:?}",token_entity);
-                        Ok(Some(TokenService::create(token_entity).await.unwrap()))
-                    },
-                    None => {
-                        log::info!("Mira - No asset found in TG");
-                        log::info!("Checking Fuel Token Gateway ....");
-                        let fuel_contract = ContractId::from_str(CONFIG.default.cdi_fuel_token_gateway.as_str())
+                    let token_entity = TokenEntity {
+                        id: Uuid::new_v4(),
+                        address: asset_id.to_string(),
+                        symbol: token_symbol,
+                        name: token_name,
+                        decimals: token_decimals as i32,
+                        ..Default::default()
+                    };
+                    log::info!(
+                        "Mira - All data ready to create new Token entity: {:?}",
+                        token_entity
+                    );
+                    Ok(Some(TokenService::create(token_entity).await.unwrap()))
+                }
+                None => {
+                    log::info!("Mira - No asset found in TG");
+                    log::info!("Checking Fuel Token Gateway ....");
+                    let fuel_contract =
+                        ContractId::from_str(CONFIG.default.cdi_fuel_token_gateway.as_str())
                             .unwrap_or(ContractId::zeroed());
-                        let fuel_gateway = MiraV1Core::new(fuel_contract, wallet);
-                        let bench_contract = Bech32ContractId
-                        ::from(ContractId::from_str(CONFIG.default.cdi_fuel_token_gateway_dependency.as_str())
-                            .unwrap_or(ContractId::zeroed()));
-                        let response = fuel_gateway.methods().name(asset_id.clone()).with_contract_ids(&[bench_contract.clone(),])
-                            .simulate(Execution::StateReadOnly).await;
+                    let fuel_gateway = MiraV1Core::new(fuel_contract, wallet);
+                    let bench_contract = Bech32ContractId::from(
+                        ContractId::from_str(
+                            CONFIG.default.cdi_fuel_token_gateway_dependency.as_str(),
+                        )
+                        .unwrap_or(ContractId::zeroed()),
+                    );
+                    let response = fuel_gateway
+                        .methods()
+                        .name(asset_id.clone())
+                        .with_contract_ids(&[bench_contract.clone()])
+                        .simulate(Execution::StateReadOnly)
+                        .await;
 
-                        match response{
-                            Ok(call_response) => {
-                                match call_response.value {
-                                    Some(token_name) => {
+                    match response {
+                        Ok(call_response) => match call_response.value {
+                            Some(token_name) => {
+                                let token_symbol = fuel_gateway
+                                    .methods()
+                                    .symbol(asset_id.clone())
+                                    .with_contract_ids(&[bench_contract.clone()])
+                                    .simulate(Execution::StateReadOnly)
+                                    .await?
+                                    .value
+                                    .unwrap();
+                                let token_decimals = fuel_gateway
+                                    .methods()
+                                    .decimals(asset_id.clone())
+                                    .with_contract_ids(&[bench_contract.clone()])
+                                    .simulate(Execution::StateReadOnly)
+                                    .await?
+                                    .value
+                                    .unwrap();
 
-                                        let token_symbol = fuel_gateway.methods().symbol(asset_id.clone()).with_contract_ids(&[bench_contract.clone(),
-                                        ]).simulate(Execution::StateReadOnly).await?.value.unwrap();
-                                        let token_decimals = fuel_gateway.methods().decimals(asset_id.clone()).with_contract_ids(&[bench_contract.clone(),
-                                        ]).simulate(Execution::StateReadOnly).await?.value.unwrap();
-
-                                        let token_entity = TokenEntity {
-                                            id: Uuid::new_v4(),
-                                            address: asset_id.to_string(),
-                                            symbol: token_symbol,
-                                            name: token_name,
-                                            decimals: token_decimals as i32,
-                                            ..Default::default()
-                                        };
-                                        log::info!("Fuel Gateway - All data ready to create new Token entity: {:?}",token_entity);
-                                        Ok(Some(TokenService::create(token_entity).await.unwrap()))
-                                    },
-                                    None => {
-                                        log::info!("No token found in fuel gateway");
-                                        let unknown_token = UnknownTokenEntity {
-                                            id: Uuid::new_v4(),
-                                            address: asset_id.to_string(),
-                                        };
-                                        let _ = UnknownTokenService::create_if_not_exists(unknown_token).await;
-                                        Ok(None)
-                                    }
-                                }
-                            },
-                            Err(_e)=>{
-                                log::info!("Fuel - No asset found - ext");
-                                let unknown_token = UnknownTokenEntity{
+                                let token_entity = TokenEntity {
+                                    id: Uuid::new_v4(),
+                                    address: asset_id.to_string(),
+                                    symbol: token_symbol,
+                                    name: token_name,
+                                    decimals: token_decimals as i32,
+                                    ..Default::default()
+                                };
+                                log::info!("Fuel Gateway - All data ready to create new Token entity: {:?}",token_entity);
+                                Ok(Some(TokenService::create(token_entity).await.unwrap()))
+                            }
+                            None => {
+                                log::info!("No token found in fuel gateway");
+                                let unknown_token = UnknownTokenEntity {
                                     id: Uuid::new_v4(),
                                     address: asset_id.to_string(),
                                 };
-                                let _ = UnknownTokenService::create_if_not_exists(unknown_token).await;
+                                let _ =
+                                    UnknownTokenService::create_if_not_exists(unknown_token).await;
                                 Ok(None)
                             }
-                        }
+                        },
+                        Err(_e) => {
+                            log::info!("Fuel - No asset found - ext");
+                            let unknown_token = UnknownTokenEntity {
+                                id: Uuid::new_v4(),
+                                address: asset_id.to_string(),
+                            };
+                            let _ = UnknownTokenService::create_if_not_exists(unknown_token).await;
+                            Ok(None)
                         }
                     }
-            }
+                }
+            },
             Err(_e) => {
                 log::info!("Mira - No asset found - ext");
-                let unknown_token = UnknownTokenEntity{
-                    id: Uuid::new_v4(),
-                    address: asset_id.to_string(),
-                };
+                let unknown_token =
+                    UnknownTokenEntity { id: Uuid::new_v4(), address: asset_id.to_string() };
                 let _ = UnknownTokenService::create_if_not_exists(unknown_token).await;
                 Ok(None)
             }
         }
     }
-
 }
-
 
 async fn get_mira_pool_metadata(mut pool: MiraPoolsEntity) -> MiraPoolsEntity {
     match TokenPairsService::find_by_id(pool.pair_id).await {
@@ -536,16 +600,13 @@ async fn get_mira_pool_metadata(mut pool: MiraPoolsEntity) -> MiraPoolsEntity {
 
                 let mira_contract = MiraV1Core::new(mira_cid, wallet);
 
-                match mira_contract.methods()
-                    .pool_metadata(
-                        (
-                            AssetId::from_str(token_pair.base_address.as_str())
-                                .unwrap_or_default(),
-                            AssetId::from_str(token_pair.quote_address.as_str())
-                                .unwrap_or_default(),
-                            false,
-                        )
-                    )
+                match mira_contract
+                    .methods()
+                    .pool_metadata((
+                        AssetId::from_str(token_pair.base_address.as_str()).unwrap_or_default(),
+                        AssetId::from_str(token_pair.quote_address.as_str()).unwrap_or_default(),
+                        false,
+                    ))
                     .simulate(Execution::StateReadOnly)
                     .await
                 {
@@ -555,10 +616,8 @@ async fn get_mira_pool_metadata(mut pool: MiraPoolsEntity) -> MiraPoolsEntity {
                             pool.reserve_quote = Decimal::new(pool_sample.reserve_1 as i64, 0);
                             pool.updated_at = Utc::now();
 
-
                             match MiraPoolsService::update(pool.clone()).await {
-                                Ok(_result) => {
-                                }
+                                Ok(_result) => {}
                                 Err(err) => {
                                     log::error!("Update error: {}", err);
                                 }

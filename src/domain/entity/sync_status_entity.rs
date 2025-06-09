@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use uuid::Uuid;
 
-#[derive(Debug,Serialize)]
+#[derive(Debug, Serialize)]
 pub struct SyncStatusEntity {
     pub id: Uuid,
     pub block_number: i32,
@@ -17,7 +17,6 @@ pub struct SyncStatusEntity {
 
 impl Entity<Model> for SyncStatusEntity {
     fn from_model(model: &Model) -> Self {
-
         let block_time: Option<DateTime<Utc>> = model.block_time.map(|bt| bt.with_timezone(&Utc));
 
         Self {
@@ -51,7 +50,7 @@ impl Default for SyncStatusEntity {
             block_number: 0,
             block_time: None,
             first_calculation_point: Utc::now(),
-            calculation_data_ready:false,
+            calculation_data_ready: false,
             created_at: Utc::now(),
             updated_at: Utc::now(),
         }

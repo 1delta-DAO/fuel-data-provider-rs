@@ -113,10 +113,7 @@ impl EnvVar {
     where
         T::Err: std::fmt::Debug,
     {
-        env::var(self.to_string())
-            .ok()
-            .and_then(|val| val.parse().ok())
-            .unwrap_or(default)
+        env::var(self.to_string()).ok().and_then(|val| val.parse().ok()).unwrap_or(default)
     }
 }
 
@@ -150,29 +147,40 @@ pub fn load_config_from_env_or_file() -> Result<AppConfig, Box<dyn Error>> {
         EnvVar::DBMinConnections.get_value(config.default.db_min_connections);
     config.default.db_max_connections =
         EnvVar::DBMaxConnections.get_value(config.default.db_max_connections);
-    config.default.db_sql_logging =
-        EnvVar::DBSQLLogging.get_value(config.default.db_sql_logging);
+    config.default.db_sql_logging = EnvVar::DBSQLLogging.get_value(config.default.db_sql_logging);
     config.default.data_refresh_interval =
         EnvVar::DataRefreshInterval.get_value(config.default.data_refresh_interval);
     config.default.rpc_url_one = EnvVar::RpcUrlOne.get_value(config.default.rpc_url_one.clone());
     config.default.rpc_url_two = EnvVar::RpcUrlTwo.get_value(config.default.rpc_url_two.clone());
-    config.default.rpc_url_three = EnvVar::RpcUrlThree.get_value(config.default.rpc_url_three.clone());
+    config.default.rpc_url_three =
+        EnvVar::RpcUrlThree.get_value(config.default.rpc_url_three.clone());
     config.default.tx_log_start_block_number =
         EnvVar::TxLogStartBlockNumber.get_value(config.default.tx_log_start_block_number);
     config.default.calculation_window =
         EnvVar::CalculationWindow.get_value(config.default.calculation_window);
-    config.default.api_query_sleep_time = EnvVar::ApiQuerySleepTime.get_value(config.default.api_query_sleep_time);
-    config.default.high_risk_swaps = EnvVar::HighRiskSwaps.get_value(config.default.high_risk_swaps);
-    config.default.high_risk_liquidity = EnvVar::HighRiskLiquidity.get_value(config.default.high_risk_liquidity);
-    config.default.cdi_fuel_token_gateway = EnvVar::CdiFuelTokenGateway.get_value(config.default.cdi_fuel_token_gateway.clone());
-    config.default.cdi_fuel_token_gateway_dependency = EnvVar::CdiFuelTokenGatewayDependency.get_value(config.default.cdi_fuel_token_gateway_dependency.clone());
-    config.default.cdi_mira_token_gateway = EnvVar::CdiMiraTokenGateway.get_value(config.default.cdi_mira_token_gateway.clone());
+    config.default.api_query_sleep_time =
+        EnvVar::ApiQuerySleepTime.get_value(config.default.api_query_sleep_time);
+    config.default.high_risk_swaps =
+        EnvVar::HighRiskSwaps.get_value(config.default.high_risk_swaps);
+    config.default.high_risk_liquidity =
+        EnvVar::HighRiskLiquidity.get_value(config.default.high_risk_liquidity);
+    config.default.cdi_fuel_token_gateway =
+        EnvVar::CdiFuelTokenGateway.get_value(config.default.cdi_fuel_token_gateway.clone());
+    config.default.cdi_fuel_token_gateway_dependency = EnvVar::CdiFuelTokenGatewayDependency
+        .get_value(config.default.cdi_fuel_token_gateway_dependency.clone());
+    config.default.cdi_mira_token_gateway =
+        EnvVar::CdiMiraTokenGateway.get_value(config.default.cdi_mira_token_gateway.clone());
     config.default.cdi_mira_amm = EnvVar::CdiMiraAmm.get_value(config.default.cdi_mira_amm.clone());
-    config.default.mira_swap_event = EnvVar::MiraSwapEvent.get_value(config.default.mira_swap_event.clone());
-    config.default.mira_create_pool = EnvVar::MiraCreatePool.get_value(config.default.mira_create_pool.clone());
-    config.default.mira_total_supply = EnvVar::MiraTotalSupply.get_value(config.default.mira_total_supply.clone());
-    config.default.mira_pool_max_age = EnvVar::MiraPoolMaxAge.get_value(config.default.mira_pool_max_age);
+    config.default.mira_swap_event =
+        EnvVar::MiraSwapEvent.get_value(config.default.mira_swap_event.clone());
+    config.default.mira_create_pool =
+        EnvVar::MiraCreatePool.get_value(config.default.mira_create_pool.clone());
+    config.default.mira_total_supply =
+        EnvVar::MiraTotalSupply.get_value(config.default.mira_total_supply.clone());
+    config.default.mira_pool_max_age =
+        EnvVar::MiraPoolMaxAge.get_value(config.default.mira_pool_max_age);
     config.default.sentio_url = EnvVar::SentioUrl.get_value(config.default.sentio_url.clone());
-    config.default.sentio_api_key = EnvVar::SentioApiKey.get_value(config.default.sentio_api_key.clone());
+    config.default.sentio_api_key =
+        EnvVar::SentioApiKey.get_value(config.default.sentio_api_key.clone());
     Ok(config)
 }

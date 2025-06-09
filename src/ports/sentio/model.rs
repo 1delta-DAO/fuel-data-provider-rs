@@ -40,11 +40,7 @@ impl Pool {
         let token1_address = parts[1].to_string();
         let flag = parts[2].parse::<bool>().ok()?;
 
-        Some(Pool {
-            token0_address,
-            token1_address,
-            flag,
-        })
+        Some(Pool { token0_address, token1_address, flag })
     }
 }
 
@@ -52,7 +48,6 @@ impl Pool {
 pub struct SyncSqlResult {
     pub rows: Option<Vec<SwapEvent>>,
 }
-
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct SyncSqlResponse {

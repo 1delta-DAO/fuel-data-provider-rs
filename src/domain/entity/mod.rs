@@ -4,13 +4,12 @@ pub use token_entity::TokenEntity;
 pub mod entity;
 pub mod token_pairs_entity;
 pub use token_pairs_entity::TokenPairsEntity;
-pub mod pair_swaps_entity;
 pub mod mira_pools_entity;
+pub mod pair_swaps_entity;
+mod price_data_entity;
 pub mod unknown_token_entity;
 mod volume_data_entity;
-mod price_data_entity;
-
 
 pub use price_data_entity::PriceDataEntity;
-pub use volume_data_entity::VolumeDataEntity;
 pub use unknown_token_entity::UnknownTokenEntity;
+pub use volume_data_entity::VolumeDataEntity;

@@ -16,8 +16,9 @@ impl fmt::Display for IntegrationException {
             //IntegrationException::ValidationError(msg) => write!(f, "Validation error: {}", msg),
             IntegrationException::PersistenceError(msg) => write!(f, "Persistence error: {}", msg),
             IntegrationException::IntegrationError(msg) => write!(f, "Integration error: {}", msg),
-            IntegrationException::NotFoundError(msg) => write!(f, "Entity not found error: {}", msg),
-            //IntegrationException::Other(msg) => write!(f, "Other error: {}", msg),
+            IntegrationException::NotFoundError(msg) => {
+                write!(f, "Entity not found error: {}", msg)
+            } //IntegrationException::Other(msg) => write!(f, "Other error: {}", msg),
         }
     }
 }

@@ -55,10 +55,7 @@ impl FuelRpcService {
         provider: &Provider,
         block_number: u32,
     ) -> Result<Vec<Swap>, fuels::types::errors::Error> {
-
-        let last_block = provider
-            .block_by_height(BlockHeight::from(block_number))
-            .await?;
+        let last_block = provider.block_by_height(BlockHeight::from(block_number)).await?;
 
         if last_block.is_none() {
             return Ok(Vec::new());
@@ -105,12 +102,9 @@ impl FuelRpcService {
                             }
                         }
                     }
-                    TransactionType::Mint(_mint_tx) => {
-                    }
-                    TransactionType::Create(_create_tx) => {
-                    }
-                    _ => {
-                    }
+                    TransactionType::Mint(_mint_tx) => {}
+                    TransactionType::Create(_create_tx) => {}
+                    _ => {}
                 }
             } else {
                 log::info!("Tx not found");
@@ -217,9 +211,7 @@ impl FuelRpcService {
             }
 
             // Update cache from the last cached block (or requested block if cache is empty)
-            let start_block = latest_cached_block
-                .map(|b| b + 1)
-                .unwrap_or(requested_block);
+            let start_block = latest_cached_block.map(|b| b + 1).unwrap_or(requested_block);
 
             let cache_start_time =
                 BlockchainDataService::get_block_time(&self.providers[0].clone(), &(start_block))
@@ -233,8 +225,7 @@ impl FuelRpcService {
                 Self::minutes_from_now(cache_start_time).unwrap()
             );
 
-            self.get_logs_from_block_range(start_block, latest_block_number)
-                .await;
+            self.get_logs_from_block_range(start_block, latest_block_number).await;
 
             // Return the logs for the requested block
             //block from cache after update
