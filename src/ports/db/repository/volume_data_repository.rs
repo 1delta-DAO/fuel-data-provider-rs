@@ -1,12 +1,12 @@
-use crate::ports::db::repository::CrudRepository;
-use async_trait::async_trait;
-use sea_orm::DbErr;
-use sea_orm::ColumnTrait;
-use uuid::Uuid;
 use crate::config::CONFIG;
 use crate::ports::db::database_manager::DB_MANAGER;
 use crate::ports::db::model::volume_data;
 use crate::ports::db::model::volume_data::Model;
+use crate::ports::db::repository::CrudRepository;
+use async_trait::async_trait;
+use sea_orm::ColumnTrait;
+use sea_orm::DbErr;
+use uuid::Uuid;
 
 pub struct VolumeDataRepository;
 
@@ -16,7 +16,8 @@ impl CrudRepository<volume_data::Entity> for VolumeDataRepository {}
 impl VolumeDataRepository {
     /// Finds volume records by id
     pub async fn find_by_token_id(token_id: &Uuid) -> Result<Option<Vec<Model>>, DbErr> {
-        let result = Self::find_by_column_many(volume_data::Column::TokenId, token_id.to_owned()).await?;
+        let result =
+            Self::find_by_column_many(volume_data::Column::TokenId, token_id.to_owned()).await?;
 
         if result.is_empty() {
             Ok(None)
@@ -27,7 +28,7 @@ impl VolumeDataRepository {
 
     pub async fn find_by_timestamp_and_token_id(
         timestamp: &chrono::DateTime<chrono::Utc>,
-        token_id: &Uuid
+        token_id: &Uuid,
     ) -> Result<Option<Model>, DbErr> {
         use sea_orm::{Condition, EntityTrait, QueryFilter};
 
@@ -43,8 +44,8 @@ impl VolumeDataRepository {
 
     /// Deletes volume data records older than the specified number of minutes
     pub async fn delete_expired() -> Result<u64, DbErr> {
-        use sea_orm::{Condition, prelude::*};
-        use chrono::{Utc, Duration};
+        use chrono::{Duration, Utc};
+        use sea_orm::{prelude::*, Condition};
 
         let minutes = CONFIG.default.calculation_window as i64;
 
@@ -61,7 +62,6 @@ impl VolumeDataRepository {
             .await?;
 
         // Return the number of rows affected
-        //log::info!("Deleted {} volume data records", delete_result.rows_affected);
         Ok(delete_result.rows_affected)
     }
 }

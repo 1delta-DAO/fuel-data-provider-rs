@@ -47,7 +47,7 @@ impl PairSwapsService {
         match PairSwapsRepository::find_by_block_number(block_number).await {
             Ok(result) => !result.is_empty(),
             Err(err) => {
-                eprintln!("Error checking block number existence: {:?}", err);
+                log::error!("Error checking block number existence: {:?}", err);
                 false
             }
         }

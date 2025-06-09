@@ -1,9 +1,9 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use reqwest::Client;
-use serde_json::json;
 use crate::config::CONFIG;
 use crate::ports::sentio::{ApiResponse, SwapEvent};
+use reqwest::Client;
+use serde_json::json;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 const BATCH_SIZE: usize = 100;
 
@@ -25,8 +25,12 @@ impl SubgraphQueryService {
         }
     }
 
-    pub async fn initialize_cache(&self, block_start: u32, block_end: u32) -> Result<(), Box<dyn std::error::Error>> {
-        log::info!("Initializing cache: {}-{}",block_start,block_end);
+    pub async fn initialize_cache(
+        &self,
+        block_start: u32,
+        block_end: u32,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        log::info!("Initializing cache: {}-{}", block_start, block_end);
         let mut offset = 0;
         let mut last_block: String = "".to_string();
 
@@ -38,7 +42,8 @@ impl SubgraphQueryService {
                 "offset": offset.to_string()
             });
 
-            let response = self.client
+            let response = self
+                .client
                 .post(&self.endpoint)
                 .header("Content-Type", "application/json")
                 .header("api-key", &self.api_key)
@@ -47,13 +52,11 @@ impl SubgraphQueryService {
                 .await?;
 
             let response_text = response.text().await?;
-            //log::info!("Response: {}", response_text);
-            let parsed_response: ApiResponse = serde_json::from_str(&response_text)
-                .map_err(|e| {
+            let parsed_response: ApiResponse =
+                serde_json::from_str(&response_text).map_err(|e| {
                     log::error!("JSON conversion exception: {:?}", e);
                     e
                 })?;
-            //log::info!("Fetched rows: {}", parsed_response.sync_sql_response.result.rows.as_ref().map_or(0, |r| r.len()));
 
             let mut cache = self.cache.lock().unwrap();
             if let Some(rows) = parsed_response.sync_sql_response.result.rows {
@@ -89,12 +92,13 @@ impl SubgraphQueryService {
             .cloned()
             .collect();
 
-        //log::info!("{} results found for block_number {}", results.len(), block_number);
         results
     }
 
-    pub async fn get_logs_by_block_number(&self, block_number: u32) -> Result<Vec<SwapEvent>, Box<dyn std::error::Error>> {
-
+    pub async fn get_logs_by_block_number(
+        &self,
+        block_number: u32,
+    ) -> Result<Vec<SwapEvent>, Box<dyn std::error::Error>> {
         let request_body = serde_json::json!({
             "block_number_start": (block_number).to_string(),
             "block_number_end": block_number.to_string(),
@@ -102,24 +106,27 @@ impl SubgraphQueryService {
             "offset": "0".to_string()
         });
 
-        let response = self.client
+        let response = self
+            .client
             .post(&self.endpoint)
             .header("Content-Type", "application/json")
             .header("api-key", &self.api_key)
             .json(&request_body)
             .send()
             .await?;
-    
-        let response_text = response.text().await?;
-        let parsed_response: ApiResponse = serde_json::from_str(&response_text)
-            .map_err(|e| {
-                log::error!("JSON conversion exception : {:?}", e);
-                e
-            })?;
-        log::info!("parsed_response: `{:?}`",parsed_response);
-    
-        let rows = parsed_response.sync_sql_response.result.rows.unwrap_or_default();
-        Ok(rows)
 
+        let response_text = response.text().await?;
+        let parsed_response: ApiResponse = serde_json::from_str(&response_text).map_err(|e| {
+            log::error!("JSON conversion exception : {:?}", e);
+            e
+        })?;
+        log::info!("parsed_response: `{:?}`", parsed_response);
+
+        let rows = parsed_response
+            .sync_sql_response
+            .result
+            .rows
+            .unwrap_or_default();
+        Ok(rows)
     }
 }

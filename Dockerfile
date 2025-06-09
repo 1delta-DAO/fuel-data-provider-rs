@@ -134,13 +134,6 @@ RUN if [ ! -f "resources/abi/fuel_token_gateway/out/debug/bridge_fungible_token-
       exit 1; \
     fi
 
-
-#RUN if [ ! -f "resources/abi/fuel_token_gateway/out/debug/bridge_fungible_token-abi.json" ]; then \
-#      echo "Creating empty ABI file as fallback..."; \
-#      mkdir -p resources/abi/fuel_token_gateway/out/debug; \
-#      echo '{"types":[],"functions":[]}' > resources/abi/fuel_token_gateway/out/debug/bridge_fungible_token-abi.json; \
-#    fi
-
 # Build the application
 RUN cargo build --release
 

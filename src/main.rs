@@ -31,12 +31,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             match TxSync::synchronize_transactions(1).await{
                 Ok(_) => {
                     retry_count = 0;
-                    println!("Synchronization finished successfully.");
+                    log::info!("Synchronization finished successfully.");
                 },
                 Err(e) => {
                     retry_count += 1;
-                    eprintln!("Top level - Error occurred: {}", e);
-                    println!("Retrying sync service job in {} seconds", calculate_backoff(retry_count));
+                    log::error!("Top level - Error occurred: {}", e);
+                    log::info!("Retrying sync service job in {} seconds", calculate_backoff(retry_count));
                 },
             }
             tokio::time::sleep(tokio::time::Duration::from_secs(calculate_backoff(retry_count))).await;
@@ -50,12 +50,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             match ExpiredDataManager::cleanup_job().await {
                 Ok(_) => {
                     retry_count = 0;
-                    println!("Cleanup job finished successfully.");
+                    log::info!("Cleanup job finished successfully.");
                 },
                 Err(e) => {
                     retry_count += 1;
-                    eprintln!("Top level - Error occurred: {}", e);
-                    println!("Retrying data cleanup job in {} seconds", calculate_backoff(retry_count));
+                    log::error!("Top level - Error occurred: {}", e);
+                    log::info!("Retrying data cleanup job in {} seconds", calculate_backoff(retry_count));
                 },
             }
             tokio::time::sleep(tokio::time::Duration::from_secs(calculate_backoff(retry_count))).await;
@@ -69,12 +69,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             match CalculationManager::calculate_stats_job().await {
                 Ok(_) => {
                     retry_count = 0;
-                    println!("Calculation job finished successfully.");
+                    log::info!("Calculation job finished successfully.");
                 },
                 Err(e) => {
                     retry_count += 1;
-                    eprintln!("Top level - Error occurred: {}", e);
-                    println!("Retrying stats calculation job in {} seconds", calculate_backoff(retry_count));
+                    log::error!("Top level - Error occurred: {}", e);
+                    log::info!("Retrying stats calculation job in {} seconds", calculate_backoff(retry_count));
                 },
             }
             tokio::time::sleep(tokio::time::Duration::from_secs(calculate_backoff(retry_count))).await;

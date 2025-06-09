@@ -45,8 +45,6 @@ impl TxSync{
         log::info!("TXS-{}: - Start block time: {:?}",runner_id,start_block_time);
 
         let fuel_rpc_service = FuelRpcService::new().await?;
-        //let _ = fuel_rpc_service.initialize_cache(start_block).await?;
-        //let subgraph_service = SubgraphQueryService::new();
 
         loop {
             let provider = Provider::connect(CONFIG.default.rpc_url_one.as_str()).await?;
@@ -54,21 +52,7 @@ impl TxSync{
 
             log::info!("TXS-{}: - Current block: {}",runner_id,current_block);
 
-/*            for block_height in start_block..=current_block {
-                if is_block_in_calc_window(&provider, block_height as u64).await {
-                    let _ = fuel_rpc_service.initialize_cache(block_height).await?;
-                    start_block = block_height;
-                    break;
-                }
-            }*/
-
             start_block = get_start_block_number(&provider).await;
-
-            //return Ok(());
-
-            //let _ = subgraph_service.initialize_cache(start_block,current_block).await;
-
-
 
             if current_block > start_block {
 
@@ -76,11 +60,8 @@ impl TxSync{
 
                 for block_height in start_block..=current_block {
                     let start = Instant::now();
-                    //log::info!("TXS-{}: - Block {} - Start",runner_id,block_height, start.elapsed());
 
                     if is_block_in_calc_window(&provider, block_height).await {
-                        //let block = provider.block_by_height(BlockHeight::from(block_height)).await?;
-                        //log::info!("TXS-{}: - Block {} - Start - block found {:?}",runner_id,block_height, start.elapsed());
                         let mut pair_swaps_vec: Vec<PairSwapsEntity> = Vec::new();
 
                         if PairSwapsService::exists_by_block_number(block_height as i32).await{
@@ -89,7 +70,6 @@ impl TxSync{
                         }
 
                         let swaps = fuel_rpc_service.get_logs(block_height).await?;
-                        //log::info!("TXS-{}: - Block {} - Swaps: {} ut:{:?}",runner_id,block_height,swaps.len(), start.elapsed());
 
                             if !swaps.is_empty(){
 
@@ -145,7 +125,6 @@ impl TxSync{
                             }else {
                                 let _ = SyncStatusService::update_block_number(block_height as i32).await;
                                 fuel_rpc_service.remove_from_cache(block_height as u32).await;
-                                //log::info!("TXS-{}: - Block {} - No swaps found - skipped - ut:{:?}",runner_id,block_height, start.elapsed());
                                 continue;
                             }
                         //}
@@ -164,7 +143,6 @@ impl TxSync{
                     }
                 }
             }
-            //break;
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
     }
@@ -189,10 +167,6 @@ pub async fn add_volume(
         pair_swap.base_amount as f64 / 10f32.powi(token_base.decimals) as f64,
     token_base.decimals);
 
-    //log::info!("PairSwaps: {:?}", pair_swap);
-    //log::info!("BaseToken: {:?}",token_base);
-    //log::info!("BaseAmount: {}",base_amount);
-
     let volume_base = VolumeDataEntity {
         timestamp,
         token_id: token_base.id,
@@ -205,16 +179,11 @@ pub async fn add_volume(
             token_base.id, err
         );
         return Err(err);
-    }/*else{
-        log::info!("Volume base added: {:?}", volume_base)
-    }*/
+    }
 
     let quote_amount = Converter::round_f64(
         pair_swap.quote_amount as f64 / 10f32.powi(token_quote.decimals) as f64
     ,token_quote.decimals);
-
-    //log::info!("QuoteToken: {:?}",token_quote);
-    //log::info!("QuoteAmount: {}",quote_amount);
 
     let volume_quote = VolumeDataEntity {
         timestamp,
@@ -228,9 +197,7 @@ pub async fn add_volume(
             token_quote.id, err
         );
         return Err(err);
-    }/*else{
-        log::info!("Volume quote added: {:?}", volume_quote)
-    }*/
+    }
 
     Ok(())
 }
@@ -260,17 +227,14 @@ pub async fn add_price(
         token_quote.quoting);
 
 
-    // Używamy konsekwentnie f64 dla wszystkich obliczeń
     let base_amount_decimal = pair_swap.base_amount as f64 / 10f64.powi(token_base.decimals);
     let quote_amount_decimal = pair_swap.quote_amount as f64 / 10f64.powi(token_quote.decimals);
 
-    // Cena base_token wyrażona w quote_token (ile quote_token za 1 base_token)
     let base_price = Converter::round_f64(
         quote_amount_decimal / base_amount_decimal,
         token_quote.decimals
     );
 
-    // Cena quote_token wyrażona w base_token (ile base_token za 1 quote_token)
     let quote_price = Converter::round_f64(
         base_amount_decimal / quote_amount_decimal,
         token_base.decimals
@@ -284,15 +248,12 @@ pub async fn add_price(
 
     match (token_base.quoting, token_quote.quoting) {
         (false, true) => {
-            // token_quote jest tokenem kwotowanym (quote token), aktualizujemy cenę token_base
             update_token_price(token_base, base_price, timestamp).await?;
         }
         (true, false) => {
-            // token_base jest tokenem kwotowanym (quote token), aktualizujemy cenę token_quote
             update_token_price(token_quote, quote_price, timestamp).await?;
         }
         (true, true) => {
-            // Oba tokeny są kwotowane, aktualizujemy obie ceny
             update_token_price(token_base, quote_price, timestamp).await?;
             update_token_price(token_quote, base_price, timestamp).await?;
         }
@@ -362,7 +323,6 @@ async fn update_token_price(token: &TokenEntity, new_price: f64, timestamp: Date
 async fn find_or_create_pair(base_token: &TokenEntity, quote_token: &TokenEntity) -> Option<TokenPairsEntity> {
     match TokenPairsService::find_or_create_pair(&base_token, &quote_token).await{
         Ok(token_pair) =>{
-            //let _ = find_or_create_mira_pool(token_pair.id).await;
             Some(token_pair)
         }
         Err(err)=>{
@@ -454,11 +414,9 @@ async fn is_block_in_calc_window(provider: &Provider, block_number: u32) -> bool
 
 async fn get_mira_token_details_by_asset_id(provider: &Provider,asset_id: &AssetId) -> Result<Option<TokenEntity>,Error>{
 
-    //log::info!("Fetching mira token details by asset_id: {}",asset_id.to_string());
     let token = TokenService::find_by_address(&asset_id.to_string()).await.unwrap();
 
     if token.is_some(){
-        //log::info!("Token found in DB");
         Ok(token)
     }
     else{
@@ -597,11 +555,9 @@ async fn get_mira_pool_metadata(mut pool: MiraPoolsEntity) -> MiraPoolsEntity {
                             pool.reserve_quote = Decimal::new(pool_sample.reserve_1 as i64, 0);
                             pool.updated_at = Utc::now();
 
-                            //log::info!("Updating pool metadata {:?}", pool);
 
                             match MiraPoolsService::update(pool.clone()).await {
                                 Ok(_result) => {
-                                    //log::info!("Update successful: {:?}", result);
                                 }
                                 Err(err) => {
                                     log::error!("Update error: {}", err);
