@@ -186,3 +186,6 @@ Regenerate entities (if you have to)
 sea-orm-cli generate entity -u postgresql://admin:admin@localhost:5432/fuel_data -o src/ports/db/model
 
 ```
+
+## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
