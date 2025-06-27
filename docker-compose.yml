@@ -1,18 +1,18 @@
 version: '3.8'
 
 services:
- fuel-dp:
-   build: .
-   ports:
-     - "${SERVER_PORT_HTTP:-8080}:8080"
-   restart: unless-stopped
-   environment:
-     RUST_LOG: "info"
-     SERVER_PORT_HTTP: ${SERVER_PORT_HTTP:-8080}
-     DB_URL: "db:5432/fuel_data"
-     API_QUERY_SLEEP_TIME: 35
-   networks:
-     - fuel-data-provider
+  fuel-dp:
+    build: .
+    ports:
+      - "${SERVER_PORT_HTTP:-8080}:8080"
+    restart: unless-stopped
+    environment:
+      RUST_LOG: "info"
+      SERVER_PORT_HTTP: ${SERVER_PORT_HTTP:-8080}
+      DB_URL: "db:5432/fuel_data"
+      API_QUERY_SLEEP_TIME: 35
+    networks:
+      - fuel-data-provider
   db:
     image: postgres:14.1-alpine
     container_name: db-fuel
